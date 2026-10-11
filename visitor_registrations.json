@@ -9,5 +9,16 @@
         "Department": "Computer Science",
         "Registration Time": "2026-10-11 21:43:26",
         "Approval Status": "Approved"
+    },
+    {
+        "Registration ID": "VIS-20261011221112823985",
+        "Name": "Demo Visitor",
+        "Phone": "9876543210",
+        "Email": "demo@example.com",
+        "Purpose": "Meeting",
+        "Host": "Dr. Tanvi",
+        "Department": "Computer Science",
+        "Registration Time": "2026-10-11 22:11:12",
+        "Approval Status": "Approved"
     }
 ]
