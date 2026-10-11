@@ -501,7 +501,7 @@
                     <span class="stat-title">Total Visitors</span>
                     <div class="stat-icon icon-green">♙</div>
                 </div>
-                <div class="stat-number">{{ total_visitors }}</div>
+                <div class="stat-number" id="total-visitors">{{ total_visitors }}</div>
                 <div class="stat-foot">Total records in visitor log</div>
             </article>
 
@@ -510,7 +510,7 @@
                     <span class="stat-title">Recognized Visitors</span>
                     <div class="stat-icon icon-blue">✓</div>
                 </div>
-                <div class="stat-number">{{ recognized }}</div>
+                <div class="stat-number" id="recognized-count">{{ recognized }}</div>
                 <div class="stat-foot">Records marked Recognized</div>
             </article>
 
@@ -519,7 +519,7 @@
                     <span class="stat-title">Unknown Visitors</span>
                     <div class="stat-icon icon-orange">!</div>
                 </div>
-                <div class="stat-number">{{ unknown }}</div>
+                <div class="stat-number" id="unknown-count">{{ unknown }}</div>
                 <div class="stat-foot">Records marked Unknown</div>
             </article>
         </section>
@@ -564,7 +564,7 @@
                             {% endfor %}
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="visitor-table-body">
                         {% for log in logs %}
                         <tr>
                             {% for key, value in log.items() %}
@@ -649,6 +649,256 @@
 
     search.addEventListener("input", filterRows);
     statusFilter.addEventListener("change", filterRows);
+
+    async function updateDashboard() {
+    
+    try {
+        const response = await fetch("/api/visitor-logs");
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch visitor logs");
+        }
+
+        const data = await response.json();
+
+        document.getElementById("total-visitors").textContent =
+            data.total_visitors;
+        document.getElementById("recognized-count").textContent =
+            data.recognized;
+        document.getElementById("unknown-count").textContent =
+            data.unknown;
+
+        const tableBody = document.getElementById("visitor-table-body");
+
+        if (tableBody) {
+            tableBody.replaceChildren();
+
+            data.logs.forEach(log => {
+                const row = document.createElement("tr");
+
+                Object.entries(log).forEach(([key, value]) => {
+                    const cell = document.createElement("td");
+
+                    if (key.toLowerCase() === "status") {
+                        const badge = document.createElement("span");
+                        badge.className =
+                            value.toLowerCase() === "recognized"
+                                ? "status recognized"
+                                : value.toLowerCase() === "unknown"
+                                ? "status unknown"
+                                : "status";
+
+                        badge.textContent = value;
+                        cell.appendChild(badge);
+                    } else {
+                        cell.textContent = value;
+                    }
+
+                    row.appendChild(cell);
+                });
+
+                tableBody.appendChild(row);
+            });
+
+            filterRows();
+        }
+    } catch (error) {
+        console.error("Dashboard update failed:", error);
+    }
+}
+
+updateDashboard();
+
+
+setInterval(updateDashboard, 5000);
 </script>
+
+<section style="margin: 30px 0; padding: 24px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;">
+    <h2>Visitor Entry / Exit</h2>
+    <p>Enter the visitor's name to record their entry or exit.</p>
+
+    <form action="/mark-entry" method="POST" style="margin-bottom: 20px;">
+        <label for="entry-name">Visitor Name</label><br>
+        <input
+            id="entry-name"
+            type="text"
+            name="visitor_name"
+            placeholder="Enter visitor name"
+            required
+            style="padding: 10px; margin: 10px 0; width: 250px; max-width: 90%;"
+        >
+        <button type="submit" style="padding: 10px 16px; background: #15803d; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            Mark Entry
+        </button>
+    </form>
+
+    <form action="/mark-exit" method="POST">
+        <label for="exit-name">Visitor Name</label><br>
+        <input
+            id="exit-name"
+            type="text"
+            name="visitor_name"
+            placeholder="Enter visitor name"
+            required
+            style="padding: 10px; margin: 10px 0; width: 250px; max-width: 90%;"
+        >
+        <button type="submit" style="padding: 10px 16px; background: #b91c1c; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            Mark Exit
+        </button>
+    </form>
+</section>
+
+<section id="inside-visitors-section" style="margin: 30px 0; padding: 24px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;">
+    <h2>Currently Inside Visitors</h2>
+    <p>Visitors whose entry is recorded and exit is not yet marked.</p>
+
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f1f5f9; text-align: left;">
+                    <th style="padding: 12px;">Visitor Name</th>
+                    <th style="padding: 12px;">Entry Date</th>
+                    <th style="padding: 12px;">Entry Time</th>
+                    <th style="padding: 12px;">Status</th>
+                </tr>
+            </thead>
+            <tbody id="inside-visitors-body">
+                <tr>
+                    <td colspan="4" style="padding: 12px;">Loading visitors...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section style="margin: 30px 0; padding: 24px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;">
+    <h2>Register New Visitor</h2>
+    <p>Enter visitor details and send the request for host approval.</p>
+
+    <form action="/register-visitor" method="POST">
+        <div style="margin-bottom: 15px;">
+            <label for="visitor-name">Full Name *</label><br>
+            <input id="visitor-name" name="name" type="text"
+                   placeholder="Enter full name" required
+                   style="padding: 10px; margin-top: 6px; width: 100%; max-width: 450px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="visitor-phone">Phone Number *</label><br>
+            <input id="visitor-phone" name="phone" type="tel"
+                   pattern="[0-9]{10}" maxlength="10"
+                   placeholder="10-digit mobile number" required
+                   style="padding: 10px; margin-top: 6px; width: 100%; max-width: 450px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="visitor-email">Email</label><br>
+            <input id="visitor-email" name="email" type="email"
+                   placeholder="Enter email address"
+                   style="padding: 10px; margin-top: 6px; width: 100%; max-width: 450px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="visitor-purpose">Purpose of Visit *</label><br>
+            <select id="visitor-purpose" name="purpose" required
+                    style="padding: 10px; margin-top: 6px; width: 100%; max-width: 450px;">
+                <option value="">Select purpose</option>
+                <option value="Meeting">Meeting</option>
+                <option value="Admission Inquiry">Admission Inquiry</option>
+                <option value="Seminar">Seminar</option>
+                <option value="Parent Visit">Parent Visit</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="visitor-host">Host Name *</label><br>
+            <input id="visitor-host" name="host" type="text"
+                   placeholder="Enter host or faculty name" required
+                   style="padding: 10px; margin-top: 6px; width: 100%; max-width: 450px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="visitor-department">Department *</label><br>
+            <select id="visitor-department" name="department" required
+                    style="padding: 10px; margin-top: 6px; width: 100%; max-width: 450px;">
+                <option value="">Select department</option>
+                <option value="Computer Science">Computer Science</option>
+                <option value="Admission Cell">Admission Cell</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Administration">Administration</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <button type="submit"
+                style="padding: 12px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            Submit for Approval
+        </button>
+    </form>
+</section>
+
+<script>
+async function updateInsideVisitors() {
+    const tableBody = document.getElementById("inside-visitors-body");
+
+    try {
+        const response = await fetch("/api/open-visitors");
+
+        if (!response.ok) {
+            throw new Error("Unable to load visitors");
+        }
+
+        const data = await response.json();
+        tableBody.replaceChildren();
+
+        if (data.visitors.length === 0) {
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+            cell.colSpan = 4;
+            cell.textContent = "No visitors currently inside.";
+            cell.style.padding = "12px";
+            row.appendChild(cell);
+            tableBody.appendChild(row);
+            return;
+        }
+
+        data.visitors.forEach(visitor => {
+            const row = document.createElement("tr");
+
+            [
+                visitor["Visitor Name"],
+                visitor["Entry Date"],
+                visitor["Entry Time"],
+                visitor["Status"]
+            ].forEach(value => {
+                const cell = document.createElement("td");
+                cell.textContent = value || "-";
+                cell.style.padding = "12px";
+                cell.style.borderBottom = "1px solid #e5e7eb";
+                row.appendChild(cell);
+            });
+
+            tableBody.appendChild(row);
+        });
+    } catch (error) {
+        console.error("Inside visitors update failed:", error);
+        tableBody.replaceChildren();
+
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 4;
+        cell.textContent = "Unable to load visitors. Please refresh the page.";
+        cell.style.padding = "12px";
+        row.appendChild(cell);
+        tableBody.appendChild(row);
+    }
+}
+
+updateInsideVisitors();
+setInterval(updateInsideVisitors, 5000);
+</script>
+
+
 </body>
 </html>
