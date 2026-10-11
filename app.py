@@ -3,6 +3,8 @@ from flask import Flask, render_template, request, redirect, url_for
 import csv
 import os
 from visitor_logs import mark_entry, mark_exit, get_open_visitors
+from visitor_registration import register_visitor
+from host_approval import get_pending_approvals, update_approval
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -35,6 +37,23 @@ def get_visitor_stats(logs):
         )
     }
 
+
+@app.route("/register-visitor", methods=["POST"])
+def register_new_visitor():
+    name = request.form.get("name", "")
+    phone = request.form.get("phone", "")
+    email = request.form.get("email", "")
+    purpose = request.form.get("purpose", "")
+    host = request.form.get("host", "")
+    department = request.form.get("department", "")
+
+    success, message = register_visitor(
+        name, phone, email, purpose, host, department
+    )
+
+    print(message)
+
+    return redirect(url_for("dashboard"))
 
 @app.route("/api/visitor-logs")
 def visitor_logs_api():

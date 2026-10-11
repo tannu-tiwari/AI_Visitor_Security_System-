@@ -1,0 +1,13 @@
+[
+    {
+        "Registration ID": "VIS-20261011214326476302",
+        "Name": "Test Visitor",
+        "Phone": "9876543210",
+        "Email": "sgtian002@gmail.com",
+        "Purpose": "Meeting",
+        "Host": "Dr. Tanvi",
+        "Department": "Computer Science",
+        "Registration Time": "2026-10-11 21:43:26",
+        "Approval Status": "Pending"
+    }
+]
