@@ -1,24 +1,22 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SGT University | Visitor Management</title>
+    <title>AI Visitor Security System</title>
 
     <style>
         :root {
-            --green: #16794b;
-            --green-dark: #105c39;
-            --green-light: #e9f7ef;
-            --bg: #f5f7f8;
+            --primary: #166534;
+            --primary-light: #dcfce7;
+            --bg: #f5f7fb;
             --white: #ffffff;
-            --text: #172b24;
-            --muted: #75847d;
-            --border: #e4ebe7;
-            --red: #d94141;
-            --orange: #dc8b20;
-            --shadow: 0 4px 18px rgba(20, 60, 40, 0.06);
+            --text: #172033;
+            --muted: #64748b;
+            --border: #e5e7eb;
+            --red: #dc2626;
+            --orange: #d97706;
+            --shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
         }
 
         * {
@@ -27,16 +25,10 @@
             padding: 0;
         }
 
-        html {
-            scroll-behavior: smooth;
-            scroll-padding-top: 90px;
-        }
-
         body {
-            font-family: "Segoe UI", Arial, sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             background: var(--bg);
             color: var(--text);
-            font-size: 14px;
         }
 
         button, input, select, textarea {
@@ -47,403 +39,362 @@
             cursor: pointer;
         }
 
-        .layout {
-            display: flex;
+        .app {
             min-height: 100vh;
         }
 
-        /* Sidebar */
-
-        .sidebar {
-            width: 245px;
-            background: #123c2c;
-            color: white;
-            position: fixed;
-            inset: 0 auto 0 0;
+        .topbar {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 17px 28px;
             display: flex;
-            flex-direction: column;
-            padding: 25px 16px;
-            z-index: 100;
-            overflow-y: auto;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
         }
 
         .brand {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 0 9px 28px;
-            border-bottom: 1px solid rgba(255,255,255,.13);
         }
 
         .brand-icon {
-            height: 43px;
-            width: 43px;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--primary);
+            color: white;
             display: grid;
             place-items: center;
-            border-radius: 13px;
-            background: #2c9b66;
             font-size: 23px;
         }
 
-        .brand h2 {
-            font-size: 17px;
-            line-height: 1.35;
+        .brand h1 {
+            font-size: 20px;
+            margin-bottom: 4px;
         }
 
         .brand p {
-            color: #b7d8c5;
-            font-size: 11px;
-            margin-top: 3px;
+            color: var(--muted);
+            font-size: 12px;
         }
 
-        .nav-label {
-            color: #9dc2ad;
-            text-transform: uppercase;
-            letter-spacing: 1.2px;
-            font-size: 10px;
-            font-weight: 700;
-            padding: 25px 12px 10px;
-        }
-
-        .nav-link {
+        .top-right {
             display: flex;
             align-items: center;
             gap: 12px;
-            color: #d5e7dc;
-            text-decoration: none;
-            padding: 12px 13px;
-            margin: 3px 0;
-            border-radius: 9px;
-            transition: .2s;
+            flex-wrap: wrap;
         }
 
-        .nav-link:hover,
-        .nav-link.active {
-            background: #246847;
-            color: white;
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 12px;
+            background: #f1f5f9;
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--muted);
         }
 
-        .nav-icon {
-            width: 22px;
-            font-size: 17px;
-            text-align: center;
+        .status-dot {
+            height: 8px;
+            width: 8px;
+            border-radius: 50%;
+            background: #94a3b8;
         }
 
-        .sidebar-footer {
-            margin-top: auto;
-            padding: 18px 10px 0;
-            color: #b7d8c5;
-            font-size: 11px;
-            line-height: 1.7;
+        .status-dot.online {
+            background: #16a34a;
         }
 
-        /* Main content */
-
-        .main {
-            margin-left: 245px;
-            width: calc(100% - 245px);
-            min-width: 0;
+        .status-dot.offline {
+            background: #dc2626;
         }
 
-        .topbar {
-            min-height: 82px;
-            background: white;
-            border-bottom: 1px solid var(--border);
+        .container {
+            max-width: 1500px;
+            margin: auto;
+            padding: 26px;
+        }
+
+        .page-heading {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 17px 30px;
-            gap: 20px;
-            position: sticky;
-            top: 0;
-            z-index: 50;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
         }
 
-        .topbar h1 {
-            font-size: 22px;
-            font-weight: 750;
+        .page-heading h2 {
+            font-size: 25px;
+            margin-bottom: 7px;
         }
 
-        .topbar p {
+        .page-heading p {
             color: var(--muted);
-            font-size: 12px;
-            margin-top: 5px;
+            font-size: 14px;
         }
 
-        .admin-profile {
-            display: flex;
-            align-items: center;
-            gap: 11px;
-        }
-
-        .avatar {
-            width: 40px;
-            height: 40px;
-            display: grid;
-            place-items: center;
-            border-radius: 50%;
-            color: var(--green-dark);
-            background: var(--green-light);
-            font-weight: 800;
-        }
-
-        .admin-profile strong {
-            display: block;
+        .button {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-weight: 600;
             font-size: 13px;
         }
 
-        .admin-profile small {
-            color: var(--muted);
-        }
-
-        .content {
-            padding: 27px 30px 40px;
-            max-width: 1600px;
-            margin: auto;
-        }
-
-        .welcome {
-            background: linear-gradient(110deg, #16794b, #26965e);
+        .button-primary {
+            background: var(--primary);
             color: white;
-            border-radius: 15px;
-            padding: 25px 27px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            margin-bottom: 25px;
-            box-shadow: var(--shadow);
         }
 
-        .welcome h2 {
-            font-size: 23px;
-            margin-bottom: 8px;
+        .button-primary:hover {
+            background: #14532d;
         }
 
-        .welcome p {
-            color: #e0f4e7;
-            line-height: 1.6;
+        .button-secondary {
+            background: #f1f5f9;
+            color: #334155;
         }
 
-        .welcome-icon {
-            font-size: 48px;
-            opacity: .9;
-        }
-
-        .section-heading {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin: 29px 0 15px;
-        }
-
-        .section-heading h2 {
-            font-size: 18px;
-        }
-
-        .section-heading p {
-            color: var(--muted);
-            font-size: 12px;
-            margin-top: 5px;
+        .button-danger {
+            background: #fee2e2;
+            color: #991b1b;
         }
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 17px;
+            margin-bottom: 25px;
         }
 
         .stat-card {
-            background: white;
+            background: var(--white);
             border: 1px solid var(--border);
             border-radius: 13px;
             padding: 21px;
             box-shadow: var(--shadow);
-            min-width: 0;
         }
 
         .stat-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            margin-bottom: 18px;
         }
 
         .stat-label {
             color: var(--muted);
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 13px;
         }
 
         .stat-icon {
-            width: 43px;
-            height: 43px;
-            border-radius: 12px;
+            width: 39px;
+            height: 39px;
+            border-radius: 10px;
             display: grid;
             place-items: center;
-            font-size: 21px;
+            font-size: 20px;
         }
 
-        .icon-green { background: #e7f7ed; }
-        .icon-orange { background: #fff2df; }
-        .icon-red { background: #ffebeb; }
+        .icon-green {
+            background: #dcfce7;
+        }
 
-        .stat-number {
-            font-size: 32px;
-            font-weight: 800;
-            margin-top: 17px;
+        .icon-blue {
+            background: #dbeafe;
+        }
+
+        .icon-red {
+            background: #fee2e2;
+        }
+
+        .icon-orange {
+            background: #fef3c7;
+        }
+
+        .stat-value {
+            font-size: 30px;
+            font-weight: 700;
         }
 
         .stat-note {
+            font-size: 12px;
             color: var(--muted);
-            font-size: 11px;
-            margin-top: 5px;
+            margin-top: 7px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+            gap: 20px;
+            align-items: start;
         }
 
         .panel {
-            background: white;
+            background: var(--white);
             border: 1px solid var(--border);
             border-radius: 13px;
+            padding: 21px;
             box-shadow: var(--shadow);
-            overflow: hidden;
-            margin-bottom: 22px;
+            margin-bottom: 20px;
+            min-width: 0;
         }
 
-        .panel-header {
+        .panel-heading {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            gap: 15px;
-            padding: 19px 21px;
-            border-bottom: 1px solid var(--border);
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
         }
 
-        .panel-header h3 {
-            font-size: 15px;
+        .panel-heading h3 {
+            font-size: 16px;
         }
 
-        .panel-header p {
+        .panel-heading p {
             color: var(--muted);
-            font-size: 11px;
+            font-size: 12px;
             margin-top: 5px;
         }
 
-        .panel-body {
-            padding: 21px;
+        .camera-preview {
+            min-height: 235px;
+            background: #111827;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #cbd5e1;
+            text-align: center;
+            padding: 25px;
+        }
+
+        .camera-symbol {
+            font-size: 42px;
+            margin-bottom: 12px;
+        }
+
+        .camera-preview p {
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .camera-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .notice {
+            padding: 12px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+            margin-top: 14px;
         }
 
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 17px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
         }
 
-        .field {
-            min-width: 0;
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
         }
 
-        .field.full {
+        .form-group.full {
             grid-column: 1 / -1;
         }
 
-        .field label {
-            display: block;
+        .form-group label {
             font-size: 12px;
-            font-weight: 650;
-            margin-bottom: 8px;
+            font-weight: 600;
+            color: #475569;
         }
 
-        .field input,
-        .field select,
-        .field textarea,
-        .toolbar input,
-        .toolbar select {
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
             width: 100%;
-            border: 1px solid #dce5df;
+            padding: 11px;
+            border: 1px solid #dbe1ea;
             border-radius: 8px;
-            padding: 11px 12px;
-            background: white;
             outline: none;
+            background: white;
             color: var(--text);
-            min-width: 0;
         }
 
-        .field textarea {
-            min-height: 82px;
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary);
+        }
+
+        .form-group textarea {
             resize: vertical;
+            min-height: 75px;
         }
 
-        .field input:focus,
-        .field select:focus,
-        .field textarea:focus,
-        .toolbar input:focus,
-        .toolbar select:focus {
-            border-color: var(--green);
-            box-shadow: 0 0 0 3px rgba(22,121,75,.09);
+        .form-submit {
+            margin-top: 16px;
+            width: 100%;
         }
 
-        .required {
-            color: var(--red);
-        }
-
-        .form-actions {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 20px;
-            gap: 10px;
-        }
-
-        .btn {
-            border: none;
+        .feedback {
+            display: none;
+            padding: 11px;
             border-radius: 8px;
-            padding: 10px 15px;
-            display: inline-flex;
+            margin-top: 13px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .feedback.success {
+            display: block;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .feedback.error {
+            display: block;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .table-panel {
+            margin-top: 1px;
+        }
+
+        .table-toolbar {
+            display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 7px;
-            font-weight: 650;
-            font-size: 12px;
-            text-decoration: none;
-            transition: .2s;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
-        .btn:hover {
-            filter: brightness(.95);
-            transform: translateY(-1px);
-        }
-
-        .btn-primary {
-            background: var(--green);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: #edf2ef;
-            color: #344d40;
-        }
-
-        .btn-danger {
-            background: #fff0f0;
-            color: #b72e2e;
-        }
-
-        .btn-success {
-            background: #e7f7ed;
-            color: #12673c;
-        }
-
-        .btn-small {
-            padding: 7px 10px;
-            font-size: 11px;
-        }
-
-        .toolbar {
-            padding: 16px 21px;
-            display: grid;
-            grid-template-columns: minmax(200px, 1fr) 190px;
-            gap: 12px;
-            border-bottom: 1px solid var(--border);
+        .search-input {
+            max-width: 240px;
+            min-width: 160px;
+            padding: 9px 11px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            outline: none;
         }
 
         .table-wrap {
@@ -452,628 +403,581 @@
         }
 
         table {
-            border-collapse: collapse;
             width: 100%;
-            min-width: 650px;
+            border-collapse: collapse;
             text-align: left;
-        }
-
-        th {
-            background: #f8faf9;
-            color: #64746b;
-            text-transform: uppercase;
-            font-size: 10px;
-            letter-spacing: .5px;
-            font-weight: 750;
+            font-size: 12px;
             white-space: nowrap;
         }
 
+        th {
+            background: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+        }
+
         th, td {
-            padding: 14px 18px;
-            border-bottom: 1px solid #edf1ee;
+            padding: 13px 12px;
+            border-bottom: 1px solid #edf0f5;
         }
 
         td {
-            font-size: 12px;
-            color: #33473c;
-        }
-
-        tbody tr:hover {
-            background: #fbfdfb;
-        }
-
-        .visitor-name {
-            font-weight: 700;
-            color: #20382c;
+            color: #334155;
         }
 
         .badge {
             display: inline-block;
-            border-radius: 20px;
             padding: 5px 9px;
-            font-size: 10px;
-            font-weight: 750;
-            white-space: nowrap;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
         }
 
-        .badge-recognized,
-        .badge-approved,
-        .badge-inside {
-            background: #e4f6ea;
-            color: #14723e;
+        .badge-green {
+            background: #dcfce7;
+            color: #166534;
         }
 
-        .badge-unknown,
-        .badge-rejected,
-        .badge-exited {
-            background: #ffebeb;
-            color: #b52f2f;
+        .badge-red {
+            background: #fee2e2;
+            color: #991b1b;
         }
 
-        .badge-pending {
-            background: #fff3dc;
-            color: #94600e;
+        .badge-orange {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-gray {
+            background: #f1f5f9;
+            color: #475569;
         }
 
         .empty-state {
+            padding: 25px 10px;
+            color: var(--muted);
             text-align: center;
-            color: var(--muted);
-            padding: 28px 15px;
-            font-size: 12px;
-        }
-
-        .inside-grid,
-        .approval-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px;
-            padding: 20px;
-        }
-
-        .inside-card,
-        .approval-card {
-            border: 1px solid var(--border);
-            border-radius: 11px;
-            padding: 16px;
-            min-width: 0;
-        }
-
-        .person-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .person-row h4 {
             font-size: 13px;
-            overflow-wrap: anywhere;
         }
 
-        .person-row p,
-        .details {
-            font-size: 11px;
+        .list-item {
+            border: 1px solid var(--border);
+            padding: 13px;
+            border-radius: 9px;
+            margin-bottom: 10px;
+        }
+
+        .list-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .list-item h4 {
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .list-item p {
             color: var(--muted);
-            margin-top: 7px;
-            line-height: 1.6;
-            overflow-wrap: anywhere;
+            font-size: 12px;
+            line-height: 1.7;
         }
 
-        .card-actions {
+        .list-actions {
             display: flex;
             gap: 8px;
-            margin-top: 14px;
+            margin-top: 11px;
             flex-wrap: wrap;
         }
 
-        .approval-card form {
-            display: inline-flex;
-        }
-
-        .status-line {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--muted);
+        .small-button {
+            padding: 7px 10px;
             font-size: 11px;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #26a45c;
-        }
-
-        .toast {
-            position: fixed;
-            right: 22px;
-            bottom: 22px;
-            max-width: calc(100vw - 44px);
-            padding: 14px 18px;
-            border-radius: 9px;
-            color: white;
-            background: #234c38;
-            box-shadow: var(--shadow);
-            z-index: 200;
-            display: none;
-            line-height: 1.5;
         }
 
         .footer {
-            color: var(--muted);
             text-align: center;
-            padding: 15px 0 0;
-            font-size: 11px;
+            padding: 22px;
+            color: var(--muted);
+            font-size: 12px;
         }
 
         @media (max-width: 1050px) {
-            .sidebar {
-                width: 205px;
-            }
-
-            .main {
-                margin-left: 205px;
-                width: calc(100% - 205px);
-            }
-
-            .content {
-                padding: 22px 20px 35px;
-            }
-
-            .form-grid {
+            .stats-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .main-grid {
+                grid-template-columns: 1fr;
             }
         }
 
-        @media (max-width: 720px) {
-            .sidebar {
-                position: static;
-                width: 100%;
-                padding: 12px;
-            }
-
-            .layout {
-                display: block;
-            }
-
-            .brand {
-                padding: 4px 6px 13px;
-            }
-
-            .nav-label,
-            .sidebar-footer {
-                display: none;
-            }
-
-            .sidebar nav {
-                display: flex;
-                overflow-x: auto;
-                gap: 5px;
-                padding-top: 10px;
-            }
-
-            .nav-link {
-                white-space: nowrap;
-                margin: 0;
-                padding: 10px;
-                font-size: 11px;
-            }
-
-            .nav-icon {
-                width: auto;
-            }
-
-            .main {
-                margin-left: 0;
-                width: 100%;
-            }
-
+        @media (max-width: 600px) {
             .topbar {
-                position: static;
-                padding: 17px;
+                padding: 15px;
             }
 
-            .topbar h1 {
-                font-size: 18px;
+            .container {
+                padding: 16px 12px;
             }
 
-            .content {
-                padding: 16px 13px 25px;
+            .brand h1 {
+                font-size: 16px;
             }
 
-            .welcome {
-                padding: 20px;
-            }
-
-            .welcome h2 {
-                font-size: 19px;
-            }
-
-            .welcome-icon {
-                font-size: 35px;
+            .page-heading h2 {
+                font-size: 21px;
             }
 
             .stats-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
+                gap: 10px;
             }
 
             .stat-card {
-                padding: 16px;
+                padding: 14px;
             }
 
-            .stat-number {
-                font-size: 27px;
+            .stat-value {
+                font-size: 25px;
+            }
+
+            .stat-label {
+                font-size: 12px;
+            }
+
+            .panel {
+                padding: 15px;
             }
 
             .form-grid {
                 grid-template-columns: 1fr;
             }
 
-            .field.full {
+            .form-group.full {
                 grid-column: auto;
             }
 
-            .panel-header,
-            .panel-body {
-                padding: 16px;
-            }
-
-            .toolbar {
-                grid-template-columns: 1fr;
-                padding: 14px;
-            }
-
-            .inside-grid,
-            .approval-grid {
-                grid-template-columns: 1fr;
-                padding: 13px;
-            }
-
-            .admin-profile > div:last-child {
-                display: none;
+            .search-input {
+                max-width: 100%;
+                width: 100%;
             }
         }
     </style>
 </head>
 
 <body>
-<div class="layout">
+<div class="app">
 
-    <aside class="sidebar">
+    <header class="topbar">
         <div class="brand">
-            <div class="brand-icon">🛡️</div>
+            <div class="brand-icon">🛡</div>
             <div>
-                <h2>SGT University</h2>
-                <p>Smart Visitor Security</p>
+                <h1>AI Visitor Security</h1>
+                <p>Smart College Visitor Management System</p>
             </div>
         </div>
 
-        <div class="nav-label">Main Menu</div>
-        <nav>
-            <a class="nav-link active" href="#overview"><span class="nav-icon">▦</span> Dashboard</a>
-            <a class="nav-link" href="#visitor-logs"><span class="nav-icon">▤</span> Visitor Logs</a>
-            <a class="nav-link" href="#entry-exit"><span class="nav-icon">↔</span> Entry / Exit</a>
-            <a class="nav-link" href="#inside-visitors"><span class="nav-icon">◉</span> Currently Inside</a>
-        </nav>
-
-        <div class="nav-label">Visitor Management</div>
-        <nav>
-            <a class="nav-link" href="#registration"><span class="nav-icon">＋</span> Registration</a>
-            <a class="nav-link" href="#host-approvals"><span class="nav-icon">✓</span> Host Approval</a>
-        </nav>
-
-        <div class="sidebar-footer">
-            <strong>AI Visitor Security System</strong><br>
-            Smart entry and visitor monitoring<br>
-            Dashboard prototype
+        <div class="top-right">
+            <div class="status-pill">
+                <span class="status-dot" id="cameraDot"></span>
+                <span id="cameraStatus">Checking camera...</span>
+            </div>
+            <div class="status-pill">
+                <span class="status-dot online"></span>
+                Dashboard Active
+            </div>
         </div>
-    </aside>
+    </header>
 
-    <main class="main">
-        <header class="topbar">
+    <main class="container">
+
+        <section class="page-heading">
             <div>
-                <h1>Visitor Management Dashboard</h1>
-                <p>Monitor registrations, visitor entry and campus activity.</p>
+                <h2>Security Dashboard</h2>
+                <p>Monitor visitors, registrations and security activity.</p>
             </div>
-            <div class="admin-profile">
-                <div class="avatar">A</div>
-                <div>
-                    <strong>Administrator</strong>
-                    <small>Security Management</small>
-                </div>
-            </div>
-        </header>
+            <button class="button button-secondary" id="refreshButton">
+                ↻ Refresh Dashboard
+            </button>
+        </section>
 
-        <div class="content">
-
-            <section class="welcome" id="overview">
-                <div>
-                    <h2>Welcome to Visitor Management</h2>
-                    <p>Manage visitor registrations, review host approvals, and monitor entry and exit records from one place.</p>
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-top">
+                    <span class="stat-label">Total Visitor Records</span>
+                    <div class="stat-icon icon-blue">👥</div>
                 </div>
-                <div class="welcome-icon">🏫</div>
-            </section>
-
-            <div class="section-heading">
-                <div>
-                    <h2>Dashboard Overview</h2>
-                    <p>Visitor activity based on the current visitor log.</p>
+                <div class="stat-value" id="totalVisitors">
+                    {{ total_visitors|default(0) }}
                 </div>
-                <div class="status-line"><span class="status-dot"></span> Dashboard connected</div>
+                <div class="stat-note">Recorded face-recognition events</div>
             </div>
 
-            <section class="stats-grid">
-                <article class="stat-card">
-                    <div class="stat-top">
-                        <span class="stat-label">Total Log Records</span>
-                        <span class="stat-icon icon-green">👥</span>
-                    </div>
-                    <div class="stat-number" id="total-visitors">{{ total_visitors }}</div>
-                    <div class="stat-note">Records stored in visitor logs</div>
-                </article>
-
-                <article class="stat-card">
-                    <div class="stat-top">
-                        <span class="stat-label">Recognized Records</span>
-                        <span class="stat-icon icon-orange">✓</span>
-                    </div>
-                    <div class="stat-number" id="recognized-count">{{ recognized }}</div>
-                    <div class="stat-note">Face recognition marked as recognized</div>
-                </article>
-
-                <article class="stat-card">
-                    <div class="stat-top">
-                        <span class="stat-label">Unknown Records</span>
-                        <span class="stat-icon icon-red">!</span>
-                    </div>
-                    <div class="stat-number" id="unknown-count">{{ unknown }}</div>
-                    <div class="stat-note">Requires appropriate human verification</div>
-                </article>
-            </section>
-
-            <!-- Entry and Exit -->
-            <section id="entry-exit">
-                <div class="section-heading">
-                    <div>
-                        <h2>Manual Entry / Exit</h2>
-                        <p>Record an approved visitor's arrival or departure.</p>
-                    </div>
+            <div class="stat-card">
+                <div class="stat-top">
+                    <span class="stat-label">Recognized Events</span>
+                    <div class="stat-icon icon-green">✓</div>
                 </div>
-
-                <div class="panel">
-                    <div class="panel-body">
-                        <form id="entry-form" action="/mark-entry" method="POST">
-                            <div class="form-grid">
-                                <div class="field">
-                                    <label for="entry-name">Visitor Name <span class="required">*</span></label>
-                                    <input id="entry-name" name="visitor_name" required
-                                           placeholder="Enter registered visitor name">
-                                </div>
-                                <div class="field">
-                                    <label>&nbsp;</label>
-                                    <button class="btn btn-primary" type="submit">↗ Mark Entry</button>
-                                </div>
-                            </div>
-                        </form>
-
-                        <div style="height:1px;background:var(--border);margin:22px 0;"></div>
-
-                        <form id="exit-form" action="/mark-exit" method="POST">
-                            <div class="form-grid">
-                                <div class="field">
-                                    <label for="exit-name">Visitor Name <span class="required">*</span></label>
-                                    <input id="exit-name" name="visitor_name" required
-                                           placeholder="Enter visitor name for exit">
-                                </div>
-                                <div class="field">
-                                    <label>&nbsp;</label>
-                                    <button class="btn btn-danger" type="submit">↙ Mark Exit</button>
-                                </div>
-                            </div>
-                        </form>
-                        <p class="details">Entry is subject to the approval checks implemented by the backend. Verify visitor identity and approval before granting physical access.</p>
-                    </div>
+                <div class="stat-value" id="recognizedVisitors">
+                    {{ recognized|default(0) }}
                 </div>
-            </section>
+                <div class="stat-note">Known faces detected</div>
+            </div>
 
-            <!-- Visitor Registration -->
-            <section id="registration">
-                <div class="section-heading">
-                    <div>
-                        <h2>New Visitor Registration</h2>
-                        <p>Register a visitor and send the request for host approval.</p>
-                    </div>
+            <div class="stat-card">
+                <div class="stat-top">
+                    <span class="stat-label">Unknown Events</span>
+                    <div class="stat-icon icon-red">⚠</div>
                 </div>
+                <div class="stat-value" id="unknownVisitors">
+                    {{ unknown|default(0) }}
+                </div>
+                <div class="stat-note">Unrecognized face events</div>
+            </div>
 
-                <div class="panel">
-                    <div class="panel-header">
+            <div class="stat-card">
+                <div class="stat-top">
+                    <span class="stat-label">Currently Inside</span>
+                    <div class="stat-icon icon-orange">🏢</div>
+                </div>
+                <div class="stat-value" id="insideVisitors">0</div>
+                <div class="stat-note">Open entry records</div>
+            </div>
+        </section>
+
+        <section class="main-grid">
+
+            <div class="left-column">
+
+                <section class="panel">
+                    <div class="panel-heading">
                         <div>
-                            <h3>Visitor Information</h3>
-                            <p>Fields marked with * are required.</p>
+                            <h3>Camera Status</h3>
+                            <p>Camera availability on the server computer</p>
                         </div>
-                        <span class="stat-icon icon-green">＋</span>
+                        <span class="badge badge-gray" id="cameraBadge">Checking</span>
                     </div>
 
-                    <div class="panel-body">
-                        <form id="registration-form" action="/register-visitor" method="POST">
-                            <div class="form-grid">
-                                <div class="field">
-                                    <label for="reg-name">Full Name <span class="required">*</span></label>
-                                    <input id="reg-name" name="name" required maxlength="100"
-                                           placeholder="Enter full name">
-                                </div>
+                    <div class="camera-preview" style="padding: 0; overflow: hidden; position: relative; min-height: 235px; background: #111827;">
 
-                                <div class="field">
-                                    <label for="reg-phone">Phone Number <span class="required">*</span></label>
-                                    <input id="reg-phone" name="phone" required
-                                           type="tel" maxlength="15"
-                                           placeholder="Enter phone number">
-                                </div>
+    <img
+        id="liveCameraFeed"
+        src="/video_feed"
+        alt="Live face recognition camera feed"
+        style="display: block; width: 100%; height: auto; min-height: 235px; object-fit: contain;"
+        onerror="this.style.display='none'; document.getElementById('cameraFeedError').style.display='block';"
+    >
 
-                                <div class="field">
-                                    <label for="reg-email">Email Address</label>
-                                    <input id="reg-email" name="email" type="email"
-                                           placeholder="visitor@example.com">
-                                </div>
-
-                                <div class="field">
-                                    <label for="reg-purpose">Purpose of Visit <span class="required">*</span></label>
-                                    <select id="reg-purpose" name="purpose" required>
-                                        <option value="">Select purpose</option>
-                                        <option>Meeting</option>
-                                        <option>Admission Inquiry</option>
-                                        <option>Student Visit</option>
-                                        <option>Official Work</option>
-                                        <option>Parent Visit</option>
-                                        <option>Delivery</option>
-                                        <option>Other</option>
-                                    </select>
-                                </div>
-
-                                <div class="field">
-                                    <label for="reg-host">Host / Person to Meet <span class="required">*</span></label>
-                                    <input id="reg-host" name="host" required
-                                           placeholder="Enter host name">
-                                </div>
-
-                                <div class="field">
-                                    <label for="reg-department">Department <span class="required">*</span></label>
-                                    <select id="reg-department" name="department" required>
-                                        <option value="">Select department</option>
-                                        <option>Computer Science</option>
-                                        <option>Admissions</option>
-                                        <option>Administration</option>
-                                        <option>Accounts</option>
-                                        <option>Examination</option>
-                                        <option>Human Resources</option>
-                                        <option>Other</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-actions">
-                                <button class="btn btn-secondary" type="reset">Clear Form</button>
-                                <button class="btn btn-primary" type="submit">＋ Register Visitor</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Host Approvals -->
-            <section id="host-approvals">
-                <div class="section-heading">
-                    <div>
-                        <h2>Pending Host Approvals</h2>
-                        <p>Review visitor requests before allowing entry.</p>
-                    </div>
-                    <span class="badge badge-pending" id="pending-count">0 Pending</span>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-header">
-                        <div>
-                            <h3>Approval Requests</h3>
-                            <p>New requests are checked automatically.</p>
-                        </div>
-                        <button class="btn btn-secondary btn-small"
-                                type="button" id="refresh-approvals">↻ Refresh</button>
-                    </div>
-                    <div class="approval-grid" id="pending-approvals-list">
-                        <div class="empty-state">Loading approval requests...</div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Currently inside -->
-            <section id="inside-visitors">
-                <div class="section-heading">
-                    <div>
-                        <h2>Currently Inside Campus</h2>
-                        <p>Visitors whose entry has been recorded and exit is pending.</p>
-                    </div>
-                    <button class="btn btn-secondary btn-small"
-                            type="button" id="refresh-inside">↻ Refresh</button>
-                </div>
-
-                <div class="panel">
-                    <div class="inside-grid" id="inside-visitors-body">
-                        <div class="empty-state">Loading current visitors...</div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Visitor Logs -->
-            <section id="visitor-logs">
-                <div class="section-heading">
-                    <div>
-                        <h2>Visitor Activity Logs</h2>
-                        <p>Search, filter, and review saved visitor log records.</p>
-                    </div>
-                    <span class="badge badge-recognized">Live Updates</span>
-                </div>
-
-                <div class="panel">
-                    <div class="toolbar">
-                        <input id="search" type="search"
-                               placeholder="Search visitor name, date or time...">
-                        <select id="status-filter">
-                            <option value="">All Statuses</option>
-                            <option value="Recognized">Recognized</option>
-                            <option value="Unknown">Unknown</option>
-                        </select>
-                    </div>
-
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Visitor Name</th>
-                                    <th>Date</th>
-                                    <th>Time</th>
-                                    <th>Recognition Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="visitor-table-body">
-                                {% for log in logs %}
-                                <tr>
-                                    <td class="visitor-name">{{ log.get('Visitor Name', 'Unknown Visitor') }}</td>
-                                    <td>{{ log.get('Date', '-') }}</td>
-                                    <td>{{ log.get('Time', '-') }}</td>
-                                    <td>
-                                        <span class="badge {% if log.get('Status') == 'Recognized' %}badge-recognized{% else %}badge-unknown{% endif %}">
-                                            {{ log.get('Status', 'Unknown') }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                {% else %}
-                                <tr><td colspan="4" class="empty-state">No visitor records found.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <footer class="footer">
-                AI-Based Smart College Visitor Management System · Dashboard Prototype
-            </footer>
-        </div>
-    </main>
+    <div
+        id="cameraFeedError"
+        style="display: none; padding: 30px; text-align: center; color: #cbd5e1;"
+    >
+        <div style="font-size: 40px; margin-bottom: 12px;">📷</div>
+        <p>Live camera feed could not be loaded.</p>
+        <p style="margin-top: 8px; font-size: 12px;">
+            Check that the Flask server is running and the camera is available.
+        </p>
+        <button
+            class="button button-primary"
+            style="margin-top: 15px;"
+            onclick="retryCameraFeed()"
+        >
+            Retry Camera
+        </button>
+    </div>
 </div>
 
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div id="capturePanel" style="display:none; margin-top:15px; padding:14px; border:1px solid var(--border); border-radius:10px;">
+    <h4 style="margin-bottom:10px;">Captured Visitor Photo</h4>
+    <img id="capturedPhotoPreview" alt="Captured visitor photo"
+         style="display:none; width:100%; max-width:360px; border-radius:8px; margin-bottom:12px;">
+    <p id="captureStatus" style="font-size:13px; color:var(--muted); margin-bottom:10px;"></p>
+    <button class="button button-secondary" id="retakePhotoButton" type="button">Retake Photo</button>
+</div>
+<canvas id="captureCanvas" style="display:none;"></canvas>
+
+<div class="camera-actions">
+    <button class="button button-primary" id="captureVisitorButton" type="button">
+        Capture Visitor
+    </button>
+        <button class="button button-primary" id="checkCameraButton">
+            Check Camera
+        </button>
+        <button class="button button-secondary" onclick="retryCameraFeed()">
+            Restart Video Feed
+        </button>
+    </div>
+
+    <div class="notice">
+        Live camera feed with face recognition is connected through Flask.
+        Green boxes indicate recognized faces and red boxes indicate unknown faces.
+    </div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-heading">
+                            <div>
+                                <h3>Visitor Registration</h3>
+                                <p>Enter visitor details for host approval</p>
+                            </div>
+                            <span class="badge badge-orange">Approval Required</span>
+                        </div>
+
+                    <form id="registrationForm" style="display:none;">
+                        <div class="form-grid">
+
+                            <div class="form-group">
+                                <label for="visitorName">Visitor Name *</label>
+                                <input id="visitorName" name="name"
+                                       type="text" required
+                                       placeholder="Enter full name">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="visitorPhone">Phone Number *</label>
+                                <input id="visitorPhone" name="phone"
+                                       type="tel" required
+                                       pattern="[0-9]{10}" maxlength="10"
+                                       placeholder="10-digit mobile number">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="visitorEmail">Email</label>
+                                <input id="visitorEmail" name="email"
+                                       type="email"
+                                       placeholder="visitor@example.com">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="visitorDepartment">Department *</label>
+                                <select id="visitorDepartment" name="department" required>
+                                    <option value="">Select department</option>
+                                    <option>Computer Science</option>
+                                    <option>Information Technology</option>
+                                    <option>Electronics</option>
+                                    <option>Mechanical</option>
+                                    <option>Civil</option>
+                                    <option>Administration</option>
+                                    <option>Admissions</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="visitorPurpose">Purpose of Visit *</label>
+                                <select id="visitorPurpose" name="purpose" required>
+                                    <option value="">Select purpose</option>
+                                    <option>Admission Inquiry</option>
+                                    <option>Meeting with Faculty</option>
+                                    <option>Official Meeting</option>
+                                    <option>Parent Visit</option>
+                                    <option>Delivery</option>
+                                    <option>Maintenance</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="visitorHost">Host / Person to Meet *</label>
+                                <input id="visitorHost" name="host"
+                                       type="text" required
+                                       placeholder="Faculty or staff name">
+                            </div>
+
+                        </div>
+
+                        <input type="hidden" id="captureFilename" name="capture_filename">
+                        <button class="button button-primary form-submit" type="submit">
+                            Save Registration
+                        </button>
+
+                        <div class="feedback" id="registrationFeedback" role="status"></div>
+                    </form>
+                </section>
+
+            </div>
+
+            <div class="right-column">
+
+                <section class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Currently Inside</h3>
+                            <p>Visitors with open entry records</p>
+                        </div>
+                        <span class="badge badge-green" id="insideBadge">0 Visitors</span>
+                    </div>
+                    <div id="insideList">
+                        <div class="empty-state">Loading visitor records...</div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Pending Host Approvals</h3>
+                            <p>Review submitted registrations</p>
+                        </div>
+                        <span class="badge badge-orange" id="pendingBadge">Pending</span>
+                    </div>
+                    <div id="approvalList">
+                        <div class="empty-state">Loading approvals...</div>
+                    </div>
+                </section>
+
+            </div>
+        </section>
+
+        <section class="panel table-panel">
+            <div class="panel-heading">
+                <div>
+                    <h3>Visitor Recognition Logs</h3>
+                    <p>Recent events recorded by the face-recognition program</p>
+                </div>
+
+                <div class="table-toolbar">
+                    <input class="search-input" type="search" id="logSearch"
+                           placeholder="Search visitor...">
+                    <button class="button button-secondary" id="refreshLogsButton">
+                        Refresh Logs
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Visitor Name</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Recognition Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody">
+                        {% if logs %}
+                            {% for log in logs %}
+                            <tr>
+                                <td>{{ log.get('Visitor Name', '') }}</td>
+                                <td>{{ log.get('Date', '') }}</td>
+                                <td>{{ log.get('Time', '') }}</td>
+                                <td>
+                                    {% if log.get('Status', '') == 'Recognized' %}
+                                        <span class="badge badge-green">Recognized</span>
+                                    {% else %}
+                                        <span class="badge badge-red">Unknown</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="empty-state">No visitor logs available.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="notice">
+                These are recognition events, not a verified attendance register.
+                An entry or exit should be recorded through the appropriate security workflow.
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        AI Visitor Security System · Smart College Visitor Management
+    </footer>
+</div>
 
 <script>
-    "use strict";
+    const $ = (id) => document.getElementById(id);
+    function retryCameraFeed() {
+    const feed = document.getElementById("liveCameraFeed");
+    const error = document.getElementById("cameraFeedError");
 
-    const REFRESH_INTERVAL = 5000;
-    let latestLogs = [];
-    let toastTimer = null;
+    error.style.display = "none";
+    feed.style.display = "block";
 
-    function escapeHtml(value) {
+    // Reconnect to the Flask video stream.
+    feed.src = "/video_feed?t=" + Date.now();
+}
+
+    let capturedFilename = "";
+
+    async function captureVisitorPhoto() {
+        const feed = $("liveCameraFeed");
+        const button = $("captureVisitorButton");
+        if (!feed || !feed.complete || !feed.naturalWidth || !feed.naturalHeight) {
+            alert("Camera feed is not ready. Please wait and try again.");
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = "Capturing...";
+
+        try {
+            const canvas = $("captureCanvas");
+            canvas.width = feed.naturalWidth;
+            canvas.height = feed.naturalHeight;
+            canvas.getContext("2d").drawImage(feed, 0, 0);
+
+            const imageData = canvas.toDataURL("image/jpeg", 0.9);
+            const result = await fetchJSON("/save-capture", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ image: imageData })
+            });
+
+            if (!result.success || !result.filename) {
+                throw new Error(result.message || "Image could not be saved.");
+            }
+
+            capturedFilename = result.filename;
+            $("captureFilename").value = capturedFilename;
+            $("capturedPhotoPreview").src = imageData;
+            $("capturedPhotoPreview").style.display = "block";
+            $("capturePanel").style.display = "block";
+            $("captureStatus").textContent = "Photo saved: " + capturedFilename;
+            $("registrationForm").style.display = "block";
+            $("registrationForm").scrollIntoView({ behavior: "smooth", block: "start" });
+            if (!$("visitorName").value.trim()) $("visitorName").focus();
+        } catch (error) {
+            console.error("Capture failed:", error);
+            alert("Photo capture failed: " + error.message);
+        } finally {
+            button.disabled = false;
+            button.textContent = "Capture Visitor";
+        }
+    }
+
+    function retakeVisitorPhoto() {
+        capturedFilename = "";
+        $("captureFilename").value = "";
+        $("capturedPhotoPreview").removeAttribute("src");
+        $("capturedPhotoPreview").style.display = "none";
+        $("capturePanel").style.display = "none";
+        $("registrationForm").style.display = "none";
+        $("captureStatus").textContent = "";
+    }
+
+    let allLogs = [];
+
+    async function fetchJSON(url, options = {}) {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            throw new Error("Request failed: " + response.status);
+        }
+        return response.json();
+    }
+
+    function showFeedback(element, message, success) {
+        element.textContent = message;
+        element.className = "feedback " + (success ? "success" : "error");
+    }
+
+    function escapeHTML(value) {
         return String(value ?? "").replace(/[&<>"']/g, character => ({
             "&": "&amp;",
             "<": "&lt;",
@@ -1083,263 +987,315 @@
         })[character]);
     }
 
-    function showToast(message) {
-        const toast = document.getElementById("toast");
-        toast.textContent = message;
-        toast.style.display = "block";
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => {
-            toast.style.display = "none";
-        }, 3500);
-    }
+    async function checkCamera() {
+        $("cameraStatus").textContent = "Checking camera...";
+        $("cameraDot").className = "status-dot";
+        $("cameraBadge").className = "badge badge-gray";
+        $("cameraBadge").textContent = "Checking";
 
-    async function fetchJson(url) {
-        const response = await fetch(url, {
-            headers: { "Accept": "application/json" },
-            cache: "no-store"
-        });
+        try {
+            const data = await fetchJSON("/camera-status");
 
-        if (!response.ok) {
-            throw new Error("Request failed: " + response.status);
+            if (data.camera_available) {
+                $("cameraStatus").textContent = "Camera Available";
+                $("cameraDot").className = "status-dot online";
+                $("cameraBadge").className = "badge badge-green";
+                $("cameraBadge").textContent = "Available";
+            } else {
+                $("cameraStatus").textContent = "Camera Unavailable";
+                $("cameraDot").className = "status-dot offline";
+                $("cameraBadge").className = "badge badge-red";
+                $("cameraBadge").textContent = "Unavailable";
+            }
+
+            $("cameraMessage").textContent = data.message;
+        } catch (error) {
+            $("cameraStatus").textContent = "Status Unavailable";
+            $("cameraDot").className = "status-dot offline";
+            $("cameraBadge").className = "badge badge-red";
+            $("cameraBadge").textContent = "Error";
+            $("cameraMessage").textContent =
+                "Could not contact the Flask server. Check that app.py is running.";
         }
-
-        return response.json();
     }
 
-    function updateStats(data) {
-        document.getElementById("total-visitors").textContent =
-            data.total_visitors ?? 0;
-        document.getElementById("recognized-count").textContent =
-            data.recognized ?? 0;
-        document.getElementById("unknown-count").textContent =
-            data.unknown ?? 0;
-    }
+    function renderLogs(logs) {
+        const query = $("logSearch").value.trim().toLowerCase();
 
-    function renderVisitorLogs(logs) {
-        latestLogs = Array.isArray(logs) ? logs : [];
-
-        const searchTerm = document.getElementById("search").value
-            .trim().toLowerCase();
-        const selectedStatus = document.getElementById("status-filter").value;
-
-        const filtered = latestLogs.filter(log => {
-            const name = log["Visitor Name"] || "";
-            const date = log.Date || "";
-            const time = log.Time || "";
-            const status = log.Status || "";
-
-            const matchesSearch = [name, date, time, status]
-                .some(value => String(value).toLowerCase().includes(searchTerm));
-
-            const matchesStatus = !selectedStatus || status === selectedStatus;
-
-            return matchesSearch && matchesStatus;
-        });
-
-        const tbody = document.getElementById("visitor-table-body");
+        const filtered = logs.filter(log =>
+            Object.values(log).some(value =>
+                String(value ?? "").toLowerCase().includes(query)
+            )
+        );
 
         if (!filtered.length) {
-            tbody.innerHTML =
-                '<tr><td colspan="4" class="empty-state">No matching visitor records found.</td></tr>';
+            $("logsTableBody").innerHTML =
+                '<tr><td colspan="4" class="empty-state">No matching visitor logs.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = filtered.map(log => {
-            const name = log["Visitor Name"] || "Unknown Visitor";
-            const status = log.Status || "Unknown";
-            const badgeClass = status === "Recognized"
-                ? "badge-recognized" : "badge-unknown";
+        $("logsTableBody").innerHTML = filtered.map(log => {
+            const status = String(log.Status ?? "");
+            const recognized = status.toLowerCase() === "recognized";
 
             return `
                 <tr>
-                    <td class="visitor-name">${escapeHtml(name)}</td>
-                    <td>${escapeHtml(log.Date || "-")}</td>
-                    <td>${escapeHtml(log.Time || "-")}</td>
-                    <td><span class="badge ${badgeClass}">${escapeHtml(status)}</span></td>
-                </tr>`;
+                    <td>${escapeHTML(log["Visitor Name"])}</td>
+                    <td>${escapeHTML(log.Date)}</td>
+                    <td>${escapeHTML(log.Time)}</td>
+                    <td>
+                        <span class="badge ${recognized ? "badge-green" : "badge-red"}">
+                            ${escapeHTML(status || "Unknown")}
+                        </span>
+                    </td>
+                </tr>
+            `;
         }).join("");
     }
 
-    async function updateDashboard() {
+    async function loadLogs() {
         try {
-            const data = await fetchJson("/api/visitor-logs");
-            updateStats(data);
-            renderVisitorLogs(data.logs || []);
+            const data = await fetchJSON("/api/visitor-logs");
+
+            if (Array.isArray(data)) {
+                allLogs = data;
+            } else {
+                allLogs = data.logs || [];
+                if (data.total_visitors !== undefined) {
+                    $("totalVisitors").textContent = data.total_visitors;
+                }
+                if (data.recognized !== undefined) {
+                    $("recognizedVisitors").textContent = data.recognized;
+                }
+                if (data.unknown !== undefined) {
+                    $("unknownVisitors").textContent = data.unknown;
+                }
+            }
+
+            renderLogs(allLogs);
         } catch (error) {
-            console.error("Could not refresh visitor logs:", error);
+            console.error("Could not load visitor logs:", error);
         }
     }
 
-    async function updateInsideVisitors() {
-        const container = document.getElementById("inside-visitors-body");
-
+    async function loadInsideVisitors() {
         try {
-            const data = await fetchJson("/api/open-visitors");
-            const visitors = Array.isArray(data.visitors) ? data.visitors : [];
+            const data = await fetchJSON("/api/open-visitors");
+            const visitors = Array.isArray(data)
+                ? data
+                : (data.visitors || data.open_visitors || []);
+
+            $("insideVisitors").textContent = visitors.length;
+            $("insideBadge").textContent = visitors.length + " Visitors";
 
             if (!visitors.length) {
-                container.innerHTML =
-                    '<div class="empty-state">No visitors are currently marked as inside.</div>';
+                $("insideList").innerHTML =
+                    '<div class="empty-state">No open entry records.</div>';
                 return;
             }
 
-            container.innerHTML = visitors.map(visitor => `
-                <article class="inside-card">
-                    <div class="person-row">
-                        <h4>${escapeHtml(visitor["Visitor Name"] || visitor.Name || "Visitor")}</h4>
-                        <span class="badge badge-inside">Inside</span>
+            $("insideList").innerHTML = visitors.map(visitor => {
+                const name = visitor.Name || visitor.name ||
+                    visitor["Visitor Name"] || "Unknown";
+                const time = visitor["Entry Time"] ||
+                    visitor.entry_time || visitor.time || "";
+
+                return `
+                    <div class="list-item">
+                        <h4>${escapeHTML(name)}</h4>
+                        <p>Entry time: ${escapeHTML(time || "Not available")}</p>
+                        <div class="list-actions">
+                            <button class="button button-danger small-button"
+                                data-exit-name="${escapeHTML(name)}">
+                                Mark Exit
+                            </button>
+                        </div>
                     </div>
-                    <p class="details">
-                        Entry date: ${escapeHtml(visitor["Entry Date"] || "-")}<br>
-                        Entry time: ${escapeHtml(visitor["Entry Time"] || "-")}
-                    </p>
-                    <form action="/mark-exit" method="POST" class="card-actions">
-                        <input type="hidden" name="visitor_name"
-                               value="${escapeHtml(visitor["Visitor Name"] || visitor.Name || "")}">
-                        <button class="btn btn-danger btn-small" type="submit">Mark Exit</button>
-                    </form>
-                </article>
-            `).join("");
+                `;
+            }).join("");
         } catch (error) {
-            console.error("Could not load current visitors:", error);
-            container.innerHTML =
-                '<div class="empty-state">Unable to load current visitors. Check the Flask server.</div>';
+            $("insideList").innerHTML =
+                '<div class="empty-state">Could not load open visitor records.</div>';
         }
     }
 
-    async function updatePendingApprovals() {
-        const container = document.getElementById("pending-approvals-list");
-        const count = document.getElementById("pending-count");
-
+    async function loadApprovals() {
         try {
-            const data = await fetchJson("/api/pending-approvals");
-            const approvals = Array.isArray(data.approvals) ? data.approvals : [];
+            const data = await fetchJSON("/api/pending-approvals");
+            const approvals = Array.isArray(data)
+                ? data
+                : (data.approvals || data.pending || []);
 
-            count.textContent = `${approvals.length} Pending`;
+            $("pendingBadge").textContent = approvals.length + " Pending";
 
             if (!approvals.length) {
-                container.innerHTML =
-                    '<div class="empty-state">No pending host approvals. All caught up!</div>';
+                $("approvalList").innerHTML =
+                    '<div class="empty-state">No pending approvals.</div>';
                 return;
             }
 
-            container.innerHTML = approvals.map(visitor => `
-                <article class="approval-card">
-                    <div class="person-row">
-                        <h4>${escapeHtml(visitor.Name || "Unnamed Visitor")}</h4>
-                        <span class="badge badge-pending">Pending</span>
+            $("approvalList").innerHTML = approvals.map(visitor => {
+                const name = visitor.Name || visitor.name || "Visitor";
+                const purpose = visitor.Purpose || visitor.purpose || "";
+                const host = visitor.Host || visitor.host || "";
+                const department = visitor.Department || visitor.department || "";
+                const id = visitor["Registration ID"] ||
+                    visitor.registration_id || visitor.id || "";
+
+                return `
+                    <div class="list-item">
+                        <h4>${escapeHTML(name)}</h4>
+                        <p>
+                            Purpose: ${escapeHTML(purpose)}<br>
+                            Host: ${escapeHTML(host)}<br>
+                            Department: ${escapeHTML(department)}
+                        </p>
+                        <div class="list-actions">
+                            <button class="button button-primary small-button"
+                                data-approval-id="${escapeHTML(id)}"
+                                data-decision="approved">
+                                Approve
+                            </button>
+                            <button class="button button-danger small-button"
+                                data-approval-id="${escapeHTML(id)}"
+                                data-decision="rejected">
+                                Reject
+                            </button>
+                        </div>
                     </div>
-                    <div class="details">
-                        <strong>Purpose:</strong> ${escapeHtml(visitor.Purpose || "-")}<br>
-                        <strong>Host:</strong> ${escapeHtml(visitor.Host || "-")}<br>
-                        <strong>Department:</strong> ${escapeHtml(visitor.Department || "-")}<br>
-                        <strong>Phone:</strong> ${escapeHtml(visitor.Phone || "-")}<br>
-                        <strong>Registered:</strong> ${escapeHtml(visitor["Registration Time"] || "-")}
-                    </div>
-                    <div class="card-actions">
-                        <form action="/host-approval/${encodeURIComponent(visitor["Registration ID"] || "")}/approve"
-                              method="POST" class="approval-action"
-                              data-decision="approve">
-                            <button class="btn btn-success btn-small" type="submit">✓ Approve</button>
-                        </form>
-                        <form action="/host-approval/${encodeURIComponent(visitor["Registration ID"] || "")}/reject"
-                              method="POST" class="approval-action"
-                              data-decision="reject">
-                            <button class="btn btn-danger btn-small" type="submit">✕ Reject</button>
-                        </form>
-                    </div>
-                </article>
-            `).join("");
+                `;
+            }).join("");
         } catch (error) {
-            console.error("Could not load pending approvals:", error);
-            count.textContent = "Unavailable";
-            container.innerHTML =
-                '<div class="empty-state">Unable to load approvals. Check the Flask server.</div>';
+            $("approvalList").innerHTML =
+                '<div class="empty-state">Could not load host approvals.</div>';
         }
     }
 
-    document.getElementById("search").addEventListener("input", () => {
-        renderVisitorLogs(latestLogs);
-    });
+    async function refreshDashboard() {
+        await Promise.all([
+            loadLogs(),
+            loadInsideVisitors(),
+            loadApprovals(),
+            checkCamera()
+        ]);
+    }
 
-    document.getElementById("status-filter").addEventListener("change", () => {
-        renderVisitorLogs(latestLogs);
-    });
+    $("registrationForm").addEventListener("submit", async event => {
+        event.preventDefault();
 
-    document.getElementById("refresh-approvals").addEventListener("click", () => {
-        updatePendingApprovals();
-        showToast("Refreshing approval requests...");
-    });
+        const form = event.currentTarget;
+        const feedback = $("registrationFeedback");
+        const submitButton = form.querySelector('button[type="submit"]');
+        const formData = new FormData(form);
+        const payload = Object.fromEntries(formData.entries());
 
-    document.getElementById("refresh-inside").addEventListener("click", () => {
-        updateInsideVisitors();
-        showToast("Refreshing current visitors...");
-    });
-
-    document.addEventListener("submit", event => {
-        const form = event.target;
-
-        if (form.matches(".approval-action")) {
-            const decision = form.dataset.decision;
-            const visitorName = form.closest(".approval-card")
-                ?.querySelector("h4")?.textContent || "this visitor";
-
-            const action = decision === "approve" ? "approve" : "reject";
-
-            if (!confirm(`Are you sure you want to ${action} ${visitorName}?`)) {
-                event.preventDefault();
-            }
+        if (!payload.capture_filename) {
+            showFeedback(feedback, "Please capture a visitor photo first.", false);
+            return;
         }
-    });
 
-    document.getElementById("registration-form").addEventListener("submit", event => {
-        const phone = document.getElementById("reg-phone").value.trim();
+        submitButton.disabled = true;
+        submitButton.textContent = "Submitting...";
 
-        if (!/^[0-9+\-\s()]{10,15}$/.test(phone)) {
-            event.preventDefault();
-            showToast("Please enter a valid phone number.");
-            document.getElementById("reg-phone").focus();
-        }
-    });
+        try {
+            const response = await fetchJSON("/register-visitor", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
 
-    document.getElementById("entry-form").addEventListener("submit", event => {
-        const name = document.getElementById("entry-name").value.trim();
-        if (!name) {
-            event.preventDefault();
-            showToast("Please enter the visitor name.");
-        } else if (!confirm(`Record entry for ${name}?`)) {
-            event.preventDefault();
-        }
-    });
+            const success = response.success === true ||
+                response.status === "success";
 
-    document.getElementById("exit-form").addEventListener("submit", event => {
-        const name = document.getElementById("exit-name").value.trim();
-        if (!name) {
-            event.preventDefault();
-            showToast("Please enter the visitor name.");
-        } else if (!confirm(`Record exit for ${name}?`)) {
-            event.preventDefault();
-        }
-    });
-
-    // Highlight the selected sidebar link.
-    document.querySelectorAll(".nav-link").forEach(link => {
-        link.addEventListener("click", () => {
-            document.querySelectorAll(".nav-link").forEach(item =>
-                item.classList.remove("active")
+            showFeedback(
+                feedback,
+                response.message || (success
+                    ? "Registration submitted."
+                    : "Registration could not be completed."),
+                success
             );
-            link.classList.add("active");
-        });
+
+            if (success) {
+                form.reset();
+                retakeVisitorPhoto();
+                await loadApprovals();
+            }
+        } catch (error) {
+            showFeedback(
+                feedback,
+                "Registration failed. The backend route may expect form data instead of JSON, or the server may be unavailable.",
+                false
+            );
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = "Submit Registration";
+        }
     });
 
-    // Initial load and automatic refresh.
-    updateDashboard();
-    updateInsideVisitors();
-    updatePendingApprovals();
+    $("insideList").addEventListener("click", async event => {
+        const button = event.target.closest("[data-exit-name]");
+        if (!button) return;
 
-    setInterval(updateDashboard, REFRESH_INTERVAL);
-    setInterval(updateInsideVisitors, REFRESH_INTERVAL);
-    setInterval(updatePendingApprovals, REFRESH_INTERVAL);
+        const name = button.dataset.exitName;
+        if (!confirm("Mark " + name + " as exited?")) return;
+
+        try {
+            const response = await fetchJSON("/mark-exit", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name })
+            });
+
+            alert(response.message || "Exit request sent.");
+            await loadInsideVisitors();
+        } catch (error) {
+            alert("Exit could not be recorded. Please check the Flask backend.");
+        }
+    });
+
+    $("approvalList").addEventListener("click", async event => {
+        const button = event.target.closest("[data-approval-id]");
+        if (!button) return;
+
+        const id = button.dataset.approvalId;
+        const decision = button.dataset.decision;
+
+        if (!id) {
+            alert("Registration ID is missing. Cannot update approval.");
+            return;
+        }
+
+        try {
+            const response = await fetchJSON(
+                "/host-approval/" + encodeURIComponent(id) + "/" +
+                encodeURIComponent(decision),
+                { method: "POST" }
+            );
+
+            alert(response.message || "Approval request sent.");
+            await loadApprovals();
+        } catch (error) {
+            alert("Approval could not be updated. Check the backend route and decision values.");
+        }
+    });
+
+    $("logSearch").addEventListener("input", () => renderLogs(allLogs));
+    $("refreshButton").addEventListener("click", refreshDashboard);
+    $("refreshLogsButton").addEventListener("click", loadLogs);
+    $("checkCameraButton").addEventListener("click", checkCamera);
+    $("captureVisitorButton").addEventListener("click", captureVisitorPhoto);
+    $("retakePhotoButton").addEventListener("click", retakeVisitorPhoto);
+
+    refreshDashboard();
+
+    // Refresh dashboard data periodically.
+    // This does not start continuous face recognition.
+    setInterval(() => {
+        loadLogs();
+        loadInsideVisitors();
+        loadApprovals();
+    }, 10000);
 </script>
+
 </body>
 </html>

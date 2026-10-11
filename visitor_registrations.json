@@ -20,5 +20,16 @@
         "Department": "Computer Science",
         "Registration Time": "2026-10-11 22:11:12",
         "Approval Status": "Approved"
+    },
+    {
+        "Registration ID": "VIS-20261011234611427931",
+        "Name": "Tannu",
+        "Phone": "9650958152",
+        "Email": "sgtian002@gmail.com",
+        "Purpose": "Meeting with Faculty",
+        "Host": "Dr. Staffy",
+        "Department": "Computer Science",
+        "Registration Time": "2026-10-11 23:46:11",
+        "Approval Status": "Pending"
     }
 ]
