@@ -1,9 +1,19 @@
 Visitor Name,Date,Time,Status
-Vandana,2026-10-09,10:08:11,Recognized
-Unknown Visitor,2026-10-09,10:08:11,Unknown
-{0: 'Vandana'},2026-10-09,10:21:05,Recognized
-Vandana,2026-10-09,10:32:12,Recognized
-Vandana,2026-10-11,12:02:00,Recognized
-Unknown Visitor,2026-10-11,12:02:00,Unknown
-Unknown Visitor,2026-10-11,12:02:30,Unknown
-Vandana,2026-10-11,12:02:36,Recognized
+Vandana,09-10-2026,10:08:11,Recognized
+Unknown Visitor,09-10-2026,10:08:11,Unknown
+{0: 'Vandana'},09-10-2026,10:21:05,Recognized
+Vandana,09-10-2026,10:32:12,Recognized
+Vandana,11-10-2026,12:02:00,Recognized
+Unknown Visitor,11-10-2026,12:02:00,Unknown
+Unknown Visitor,11-10-2026,12:02:30,Unknown
+Vandana,11-10-2026,12:02:36,Recognized
+Unknown Visitor,11-10-2026,12:12:47,Unknown
+Vandana,11-10-2026,12:12:55,Recognized
+Unknown Visitor,11-10-2026,12:13:19,Unknown
+Unknown Visitor,11-10-2026,12:17:17,Unknown
+Vandana,11-10-2026,12:17:17,Recognized
+Vandana,11-10-2026,12:20:30,Recognized
+Unknown Visitor,11-10-2026,12:20:36,Unknown
+Unknown Visitor,11-10-2026,12:24:28,Unknown
+Tannu,11-10-2026,12:40:59,Recognized
+Unknown Visitor,11-10-2026,12:43:14,Unknown

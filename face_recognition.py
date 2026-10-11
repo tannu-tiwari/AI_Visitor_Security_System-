@@ -25,10 +25,7 @@ label_names = [str(name) for name in label_names]
 print("Loaded labels:", label_names)
 
 # Load face detector
-face_cascade = cv2.CascadeClassifier(
-    cv2.data.haarcascades +
-    "haarcascade_frontalface_default.xml"
-)
+
 face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
 
 if face_cascade.empty():
@@ -70,11 +67,8 @@ try:
             face = cv2.resize(face, (200, 200))
 
             label_id, confidence = recognizer.predict(face)
-
-            if (
-                confidence < 70
-                and 0 <= label_id < len(label_names)
-            ):
+            print(f"Predicted label: {label_id}, Confidence distance: {confidence:.2f}")
+            if confidence < 50 and 0 <= label_id < len(label_names):
                 name = str(label_names[label_id]).strip()
                 status = "Recognized"
                 color = (0, 255, 0)

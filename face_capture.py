@@ -10,11 +10,7 @@ if not name:
 save_path = os.path.join("dataset", name)
 os.makedirs(save_path, exist_ok=True)
 
-cascade_path = os.path.join(
-    os.path.dirname(cv2.__file__),
-    "data",
-    "haarcascade_frontalface_default.xml"
-)
+cascade_path = "haarcascade_frontalface_default.xml"
 
 face_cascade = cv2.CascadeClassifier(cascade_path)
 
