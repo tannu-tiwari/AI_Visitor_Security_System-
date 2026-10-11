@@ -838,6 +838,79 @@ setInterval(updateDashboard, 5000);
     </form>
 </section>
 
+<section style="margin: 30px 0; padding: 24px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;">
+    <h2>Pending Host Approvals</h2>
+    <p>Review visitor requests before allowing entry.</p>
+
+    <div id="pending-approvals-list">
+        <p>Loading pending requests...</p>
+    </div>
+</section>
+
+<script>
+async function updatePendingApprovals() {
+    const container = document.getElementById("pending-approvals-list");
+
+    try {
+        const response = await fetch("/api/pending-approvals");
+
+        if (!response.ok) {
+            throw new Error("Unable to load approvals");
+        }
+
+        const data = await response.json();
+        container.replaceChildren();
+
+        if (data.approvals.length === 0) {
+            const message = document.createElement("p");
+            message.textContent = "No pending approvals.";
+            container.appendChild(message);
+            return;
+        }
+
+        data.approvals.forEach(visitor => {
+            const card = document.createElement("div");
+            card.style.cssText = "padding:16px; margin:12px 0; border:1px solid #e5e7eb; border-radius:8px;";
+
+            const details = document.createElement("p");
+            details.textContent =
+                visitor.Name + " | " + visitor.Purpose +
+                " | Host: " + visitor.Host +
+                " | Department: " + visitor.Department;
+            card.appendChild(details);
+
+            ["approve", "reject"].forEach(decision => {
+                const form = document.createElement("form");
+                form.method = "POST";
+                form.action = "/host-approval/" +
+                    encodeURIComponent(visitor["Registration ID"]) +
+                    "/" + decision;
+                form.style.display = "inline-block";
+                form.style.marginRight = "10px";
+
+                const button = document.createElement("button");
+                button.type = "submit";
+                button.textContent = decision === "approve" ? "Approve" : "Reject";
+                button.style.cssText = decision === "approve"
+                    ? "padding:9px 14px; background:#15803d; color:white; border:0; border-radius:5px; cursor:pointer;"
+                    : "padding:9px 14px; background:#b91c1c; color:white; border:0; border-radius:5px; cursor:pointer;";
+
+                form.appendChild(button);
+                card.appendChild(form);
+            });
+
+            container.appendChild(card);
+        });
+    } catch (error) {
+        console.error("Approval update failed:", error);
+        container.textContent = "Unable to load approvals. Please refresh.";
+    }
+}
+
+updatePendingApprovals();
+setInterval(updatePendingApprovals, 5000);
+</script>
+
 <script>
 async function updateInsideVisitors() {
     const tableBody = document.getElementById("inside-visitors-body");

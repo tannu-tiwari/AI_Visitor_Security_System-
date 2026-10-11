@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusGuard | Visitor Management</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --green: #16794b;
+            --green-light: #e8f5ed;
+            --dark: #172b25;
+            --muted: #738078;
+            --border: #e6ebe7;
+            --background: #f6f8f6;
+        }
+
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: var(--background);
+            color: var(--dark);
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 245px;
+            background: #fff;
+            border-right: 1px solid var(--border);
+            padding: 28px 18px;
+            flex-shrink: 0;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 0 10px 32px;
+        }
+
+        .brand-icon {
+            width: 43px;
+            height: 43px;
+            border-radius: 13px;
+            background: var(--green);
+            color: white;
+            display: grid;
+            place-items: center;
+            font-size: 23px;
+        }
+
+        .brand h2 {
+            font-size: 17px;
+        }
+
+        .brand p {
+            color: var(--muted);
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        .nav-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.4px;
+            color: #98a39c;
+            padding: 10px 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 14px;
+            border-radius: 9px;
+            margin: 4px 0;
+            color: #68756d;
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .nav-item.active {
+            color: var(--green);
+            background: var(--green-light);
+            font-weight: 650;
+        }
+
+        .sidebar-note {
+            margin-top: 45px;
+            padding: 15px;
+            border-radius: 12px;
+            background: #f5f8f5;
+            font-size: 12px;
+            line-height: 1.7;
+            color: var(--muted);
+        }
+
+        .sidebar-note strong {
+            display: block;
+            color: var(--dark);
+            margin-bottom: 4px;
+        }
+
+        .main {
+            flex: 1;
+            min-width: 0;
+            padding: 28px 34px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .topbar h1 {
+            font-size: 25px;
+            letter-spacing: -0.7px;
+        }
+
+        .topbar p {
+            color: var(--muted);
+            font-size: 13px;
+            margin-top: 7px;
+        }
+
+        .admin {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .avatar {
+            width: 39px;
+            height: 39px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: #dceee2;
+            color: var(--green);
+            font-weight: 700;
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 17px;
+        }
+
+        .section-heading h2 {
+            font-size: 17px;
+        }
+
+        .section-heading p {
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .date-label {
+            font-size: 12px;
+            color: #68756d;
+            background: white;
+            padding: 10px 13px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 17px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 21px;
+            min-width: 0;
+        }
+
+        .stat-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .stat-title {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .stat-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            font-size: 18px;
+        }
+
+        .icon-green {
+            background: #e5f5eb;
+        }
+
+        .icon-blue {
+            background: #e9f1ff;
+        }
+
+        .icon-orange {
+            background: #fff0df;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            margin-top: 18px;
+            letter-spacing: -1px;
+        }
+
+        .stat-foot {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 8px;
+        }
+
+        .content-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .table-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 20px;
+        }
+
+        .table-toolbar h2 {
+            font-size: 16px;
+        }
+
+        .table-toolbar p {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 5px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 9px;
+        }
+
+        input, select {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            font: inherit;
+            font-size: 12px;
+            outline-color: var(--green);
+            min-width: 0;
+        }
+
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 12px;
+        }
+
+        thead {
+            background: #f8faf8;
+        }
+
+        th {
+            color: #7c887f;
+            font-size: 10px;
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+            padding: 14px 18px;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 16px 18px;
+            border-top: 1px solid #edf0ed;
+            white-space: nowrap;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 6px 9px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 650;
+        }
+
+        .recognized {
+            background: #e5f5eb;
+            color: #16794b;
+        }
+
+        .unknown {
+            background: #fff0df;
+            color: #a35b12;
+        }
+
+        .empty {
+            padding: 42px 20px;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .empty strong {
+            display: block;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 11px;
+            color: #89948d;
+            padding: 23px 0 4px;
+        }
+
+        @media (max-width: 1000px) {
+            .sidebar {
+                width: 205px;
+            }
+
+            .main {
+                padding: 24px 20px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .table-toolbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .filters {
+                width: 100%;
+            }
+
+            .filters input {
+                flex: 1;
+            }
+        }
+
+        @media (max-width: 650px) {
+            .layout {
+                display: block;
+            }
+
+            .sidebar {
+                width: 100%;
+                padding: 14px;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .brand {
+                padding: 0 5px 12px;
+            }
+
+            .nav-label, .sidebar-note {
+                display: none;
+            }
+
+            .sidebar nav {
+                display: flex;
+                gap: 5px;
+                overflow-x: auto;
+            }
+
+            .nav-item {
+                white-space: nowrap;
+                padding: 10px;
+                font-size: 11px;
+            }
+
+            .main {
+                padding: 23px 14px;
+            }
+
+            .topbar h1 {
+                font-size: 21px;
+            }
+
+            .admin span:last-child {
+                display: none;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+                gap: 11px;
+            }
+
+            .stat-card {
+                padding: 17px;
+            }
+
+            .stat-number {
+                font-size: 27px;
+            }
+
+            .section-heading {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .filters {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="layout">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">⌂</div>
+            <div>
+                <h2>CampusGuard</h2>
+                <p>SMART VISITOR SYSTEM</p>
+            </div>
+        </div>
+
+        <div class="nav-label">WORKSPACE</div>
+
+        <nav>
+            <a class="nav-item active" href="/">▦ Dashboard</a>
+            <a class="nav-item" href="#visitor-records">♙ Visitor Records</a>
+            <a class="nav-item" href="#visitor-records">◉ Face Recognition</a>
+            <a class="nav-item" href="#visitor-records">↗ Reports</a>
+        </nav>
+
+        <div class="sidebar-note">
+            <strong>Campus Security</strong>
+            Monitor visitor activity and review recognition records from one place.
+        </div>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <h1>Visitor Dashboard</h1>
+                <p>Overview of your campus visitor activity.</p>
+            </div>
+
+            <div class="admin">
+                <div class="avatar">A</div>
+                <span>Administrator</span>
+            </div>
+        </header>
+
+        <section class="section-heading">
+            <div>
+                <h2>Overview</h2>
+                <p>Visitor records available in the system</p>
+            </div>
+            <div class="date-label" id="current-date">Campus Overview</div>
+        </section>
+
+        <section class="stats">
+            <article class="stat-card">
+                <div class="stat-top">
+                    <span class="stat-title">Total Visitors</span>
+                    <div class="stat-icon icon-green">♙</div>
+                </div>
+                <div class="stat-number" id="total-visitors">{{ total_visitors }}</div>
+                <div class="stat-foot">Total records in visitor log</div>
+            </article>
+
+            <article class="stat-card">
+                <div class="stat-top">
+                    <span class="stat-title">Recognized Visitors</span>
+                    <div class="stat-icon icon-blue">✓</div>
+                </div>
+                <div class="stat-number" id="recognized-count">{{ recognized }}</div>
+                <div class="stat-foot">Records marked Recognized</div>
+            </article>
+
+            <article class="stat-card">
+                <div class="stat-top">
+                    <span class="stat-title">Unknown Visitors</span>
+                    <div class="stat-icon icon-orange">!</div>
+                </div>
+                <div class="stat-number" id="unknown-count">{{ unknown }}</div>
+                <div class="stat-foot">Records marked Unknown</div>
+            </article>
+        </section>
+
+        <section class="section-heading">
+            <div>
+                <h2>Visitor Activity</h2>
+                <p>Search and review recorded visitor activity.</p>
+            </div>
+        </section>
+
+        <section class="content-card" id="visitor-records">
+            <div class="table-toolbar">
+                <div>
+                    <h2>Visitor Records</h2>
+                    <p>Data loaded from visitor_logs.csv</p>
+                </div>
+
+                <div class="filters">
+                    <input
+                        type="search"
+                        id="search"
+                        placeholder="Search records..."
+                        aria-label="Search visitor records"
+                    >
+
+                    <select id="status-filter" aria-label="Filter by status">
+                        <option value="">All statuses</option>
+                        <option value="recognized">Recognized</option>
+                        <option value="unknown">Unknown</option>
+                    </select>
+                </div>
+            </div>
+
+            {% if logs %}
+            <div class="table-wrap">
+                <table id="visitor-table">
+                    <thead>
+                        <tr>
+                            {% for key in logs[0].keys() %}
+                            <th>{{ key }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody id="visitor-table-body">
+                        {% for log in logs %}
+                        <tr>
+                            {% for key, value in log.items() %}
+                            <td>
+                                {% if key|lower == 'status' %}
+                                    {% if value|lower == 'recognized' %}
+                                    <span class="status recognized">{{ value }}</span>
+                                    {% elif value|lower == 'unknown' %}
+                                    <span class="status unknown">{{ value }}</span>
+                                    {% else %}
+                                    {{ value }}
+                                    {% endif %}
+                                {% else %}
+                                    {{ value }}
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div id="no-results" class="empty" hidden>
+                No matching visitor records found.
+            </div>
+            {% else %}
+            <div class="empty">
+                <strong>No visitor records yet</strong>
+                Visitor entries will appear here when records are saved to visitor_logs.csv.
+            </div>
+            {% endif %}
+        </section>
+
+        <footer class="footer">
+            CampusGuard · AI-Based Smart College Visitor Management
+        </footer>
+    </main>
+</div>
+
+<script>
+    const dateElement = document.getElementById("current-date");
+    dateElement.textContent = new Date().toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric"
+    });
+
+    const search = document.getElementById("search");
+    const statusFilter = document.getElementById("status-filter");
+    const table = document.getElementById("visitor-table");
+    const noResults = document.getElementById("no-results");
+
+    function filterRows() {
+        if (!table) return;
+
+        const query = search.value.toLowerCase().trim();
+        const selectedStatus = statusFilter.value.toLowerCase();
+        const rows = table.querySelectorAll("tbody tr");
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            const statusCell = row.cells[row.cells.length - 1];
+            const rowStatus = statusCell
+                ? statusCell.innerText.toLowerCase().trim()
+                : "";
+
+            const matchesSearch = text.includes(query);
+            const matchesStatus =
+                !selectedStatus || rowStatus === selectedStatus;
+
+            const visible = matchesSearch && matchesStatus;
+            row.hidden = !visible;
+
+            if (visible) visibleCount++;
+        });
+
+        if (noResults) {
+            noResults.hidden = visibleCount !== 0;
+        }
+    }
+
+    search.addEventListener("input", filterRows);
+    statusFilter.addEventListener("change", filterRows);
+
+    async function updateDashboard() {
+    
+    try {
+        const response = await fetch("/api/visitor-logs");
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch visitor logs");
+        }
+
+        const data = await response.json();
+
+        document.getElementById("total-visitors").textContent =
+            data.total_visitors;
+        document.getElementById("recognized-count").textContent =
+            data.recognized;
+        document.getElementById("unknown-count").textContent =
+            data.unknown;
+
+        const tableBody = document.getElementById("visitor-table-body");
+
+        if (tableBody) {
+            tableBody.replaceChildren();
+
+            data.logs.forEach(log => {
+                const row = document.createElement("tr");
+
+                Object.entries(log).forEach(([key, value]) => {
+                    const cell = document.createElement("td");
+
+                    if (key.toLowerCase() === "status") {
+                        const badge = document.createElement("span");
+                        badge.className =
+                            value.toLowerCase() === "recognized"
+                                ? "status recognized"
+                                : value.toLowerCase() === "unknown"
+                                ? "status unknown"
+                                : "status";
+
+                        badge.textContent = value;
+                        cell.appendChild(badge);
+                    } else {
+                        cell.textContent = value;
+                    }
+
+                    row.appendChild(cell);
+                });
+
+                tableBody.appendChild(row);
+            });
+
+            filterRows();
+        }
+    } catch (error) {
+        console.error("Dashboard update failed:", error);
+    }
+}
+
+updateDashboard();
+
+
+setInterval(updateDashboard, 5000);
+</script>
+
+<section style="margin: 30px 0; padding: 24px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;">
+    <h2>Visitor Entry / Exit</h2>
+    <p>Enter the visitor's name to record their entry or exit.</p>
+
+    <form action="/mark-entry" method="POST" style="margin-bottom: 20px;">
+        <label for="entry-name">Visitor Name</label><br>
+        <input
+            id="entry-name"
+            type="text"
+            name="visitor_name"
+            placeholder="Enter visitor name"
+            required
+            style="padding: 10px; margin: 10px 0; width: 250px; max-width: 90%;"
+        >
+        <button type="submit" style="padding: 10px 16px; background: #15803d; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            Mark Entry
+        </button>
+    </form>
+
+    <form action="/mark-exit" method="POST">
+        <label for="exit-name">Visitor Name</label><br>
+        <input
+            id="exit-name"
+            type="text"
+            name="visitor_name"
+            placeholder="Enter visitor name"
+            required
+            style="padding: 10px; margin: 10px 0; width: 250px; max-width: 90%;"
+        >
+        <button type="submit" style="padding: 10px 16px; background: #b91c1c; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            Mark Exit
+        </button>
+    </form>
+</section>
+
+<section id="inside-visitors-section" style="margin: 30px 0; padding: 24px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;">
+    <h2>Currently Inside Visitors</h2>
+    <p>Visitors whose entry is recorded and exit is not yet marked.</p>
+
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f1f5f9; text-align: left;">
+                    <th style="padding: 12px;">Visitor Name</th>
+                    <th style="padding: 12px;">Entry Date</th>
+                    <th style="padding: 12px;">Entry Time</th>
+                    <th style="padding: 12px;">Status</th>
+                </tr>
+            </thead>
+            <tbody id="inside-visitors-body">
+                <tr>
+                    <td colspan="4" style="padding: 12px;">Loading visitors...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section style="margin: 30px 0; padding: 24px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;">
+    <h2>Register New Visitor</h2>
+    <p>Enter visitor details and send the request for host approval.</p>
+
+    <form action="/register-visitor" method="POST">
+        <div style="margin-bottom: 15px;">
+            <label for="visitor-name">Full Name *</label><br>
+            <input id="visitor-name" name="name" type="text"
+                   placeholder="Enter full name" required
+                   style="padding: 10px; margin-top: 6px; width: 100%; max-width: 450px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="visitor-phone">Phone Number *</label><br>
+            <input id="visitor-phone" name="phone" type="tel"
+                   pattern="[0-9]{10}" maxlength="10"
+                   placeholder="10-digit mobile number" required
+                   style="padding: 10px; margin-top: 6px; width: 100%; max-width: 450px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="visitor-email">Email</label><br>
+            <input id="visitor-email" name="email" type="email"
+                   placeholder="Enter email address"
+                   style="padding: 10px; margin-top: 6px; width: 100%; max-width: 450px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="visitor-purpose">Purpose of Visit *</label><br>
+            <select id="visitor-purpose" name="purpose" required
+                    style="padding: 10px; margin-top: 6px; width: 100%; max-width: 450px;">
+                <option value="">Select purpose</option>
+                <option value="Meeting">Meeting</option>
+                <option value="Admission Inquiry">Admission Inquiry</option>
+                <option value="Seminar">Seminar</option>
+                <option value="Parent Visit">Parent Visit</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label for="visitor-host">Host Name *</label><br>
+            <input id="visitor-host" name="host" type="text"
+                   placeholder="Enter host or faculty name" required
+                   style="padding: 10px; margin-top: 6px; width: 100%; max-width: 450px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="visitor-department">Department *</label><br>
+            <select id="visitor-department" name="department" required
+                    style="padding: 10px; margin-top: 6px; width: 100%; max-width: 450px;">
+                <option value="">Select department</option>
+                <option value="Computer Science">Computer Science</option>
+                <option value="Admission Cell">Admission Cell</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Administration">Administration</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <button type="submit"
+                style="padding: 12px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            Submit for Approval
+        </button>
+    </form>
+</section>
+
+<section style="margin: 30px 0; padding: 24px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;">
+    <h2>Pending Host Approvals</h2>
+    <p>Review visitor requests before allowing entry.</p>
+
+    <div id="pending-approvals-list">
+        <p>Loading pending requests...</p>
+    </div>
+</section>
+
+<script>
+async function updatePendingApprovals() {
+    const container = document.getElementById("pending-approvals-list");
+
+    try {
+        const response = await fetch("/api/pending-approvals");
+
+        if (!response.ok) {
+            throw new Error("Unable to load approvals");
+        }
+
+        const data = await response.json();
+        container.replaceChildren();
+
+        if (data.approvals.length === 0) {
+            const message = document.createElement("p");
+            message.textContent = "No pending approvals.";
+            container.appendChild(message);
+            return;
+        }
+
+        data.approvals.forEach(visitor => {
+            const card = document.createElement("div");
+            card.style.cssText = "padding:16px; margin:12px 0; border:1px solid #e5e7eb; border-radius:8px;";
+
+            const details = document.createElement("p");
+            details.textContent =
+                visitor.Name + " | " + visitor.Purpose +
+                " | Host: " + visitor.Host +
+                " | Department: " + visitor.Department;
+            card.appendChild(details);
+
+            ["approve", "reject"].forEach(decision => {
+                const form = document.createElement("form");
+                form.method = "POST";
+                form.action = "/host-approval/" +
+                    encodeURIComponent(visitor["Registration ID"]) +
+                    "/" + decision;
+                form.style.display = "inline-block";
+                form.style.marginRight = "10px";
+
+                const button = document.createElement("button");
+                button.type = "submit";
+                button.textContent = decision === "approve" ? "Approve" : "Reject";
+                button.style.cssText = decision === "approve"
+                    ? "padding:9px 14px; background:#15803d; color:white; border:0; border-radius:5px; cursor:pointer;"
+                    : "padding:9px 14px; background:#b91c1c; color:white; border:0; border-radius:5px; cursor:pointer;";
+
+                form.appendChild(button);
+                card.appendChild(form);
+            });
+
+            container.appendChild(card);
+        });
+    } catch (error) {
+        console.error("Approval update failed:", error);
+        container.textContent = "Unable to load approvals. Please refresh.";
+    }
+}
+
+updatePendingApprovals();
+setInterval(updatePendingApprovals, 5000);
+</script>
+
+<script>
+async function updateInsideVisitors() {
+    const tableBody = document.getElementById("inside-visitors-body");
+
+    try {
+        const response = await fetch("/api/open-visitors");
+
+        if (!response.ok) {
+            throw new Error("Unable to load visitors");
+        }
+
+        const data = await response.json();
+        tableBody.replaceChildren();
+
+        if (data.visitors.length === 0) {
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+            cell.colSpan = 4;
+            cell.textContent = "No visitors currently inside.";
+            cell.style.padding = "12px";
+            row.appendChild(cell);
+            tableBody.appendChild(row);
+            return;
+        }
+
+        data.visitors.forEach(visitor => {
+            const row = document.createElement("tr");
+
+            [
+                visitor["Visitor Name"],
+                visitor["Entry Date"],
+                visitor["Entry Time"],
+                visitor["Status"]
+            ].forEach(value => {
+                const cell = document.createElement("td");
+                cell.textContent = value || "-";
+                cell.style.padding = "12px";
+                cell.style.borderBottom = "1px solid #e5e7eb";
+                row.appendChild(cell);
+            });
+
+            tableBody.appendChild(row);
+        });
+    } catch (error) {
+        console.error("Inside visitors update failed:", error);
+        tableBody.replaceChildren();
+
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 4;
+        cell.textContent = "Unable to load visitors. Please refresh the page.";
+        cell.style.padding = "12px";
+        row.appendChild(cell);
+        tableBody.appendChild(row);
+    }
+}
+
+updateInsideVisitors();
+setInterval(updateInsideVisitors, 5000);
+</script>
+
+
+</body>
+</html>
