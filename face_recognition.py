@@ -29,6 +29,7 @@ face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades +
     "haarcascade_frontalface_default.xml"
 )
+face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
 
 if face_cascade.empty():
     print("Error: Face detector could not be loaded.")
@@ -74,7 +75,7 @@ try:
                 confidence < 70
                 and 0 <= label_id < len(label_names)
             ):
-                name = label_names[label_id]
+                name = str(label_names[label_id]).strip()
                 status = "Recognized"
                 color = (0, 255, 0)
                 display_confidence = max(0, 100 - confidence)
