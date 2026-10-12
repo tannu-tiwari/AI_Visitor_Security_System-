@@ -19,7 +19,10 @@ def load_registrations():
         return []
 
 
-def register_visitor(name, phone, email, purpose, host, department):
+def register_visitor(
+    name, phone, email, purpose, host, department,
+    capture_filename=""
+):
     name = name.strip()
     phone = phone.strip()
     email = email.strip()
@@ -40,6 +43,7 @@ def register_visitor(name, phone, email, purpose, host, department):
         "Purpose": purpose,
         "Host": host,
         "Department": department,
+        "Photo Filename": capture_filename,
         "Registration Time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "Approval Status": "Pending"
     }

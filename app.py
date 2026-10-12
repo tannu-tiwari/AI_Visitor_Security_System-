@@ -212,6 +212,7 @@ def save_capture():
 # VISITOR REGISTRATION
 # --------------------------------------------------
 
+
 @app.route("/register-visitor", methods=["POST"])
 def register_new_visitor():
     data = request.get_json(silent=True)
@@ -225,7 +226,8 @@ def register_new_visitor():
         data.get("email", ""),
         data.get("purpose", ""),
         data.get("host", ""),
-        data.get("department", "")
+        data.get("department", ""),
+        data.get("capture_filename", "")
     )
 
     if request.is_json:
@@ -235,7 +237,6 @@ def register_new_visitor():
         }), 200 if success else 400
 
     return message, 200 if success else 400
-
 
 # --------------------------------------------------
 # HOST APPROVAL

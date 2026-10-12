@@ -30,6 +30,18 @@
         "Host": "Dr. Staffy",
         "Department": "Computer Science",
         "Registration Time": "2026-10-11 23:46:11",
+        "Approval Status": "Approved"
+    },
+    {
+        "Registration ID": "VIS-20261012195725368176",
+        "Name": "Tannu",
+        "Phone": "6299591304",
+        "Email": "sgtian002@gmail.com",
+        "Purpose": "Admission Inquiry",
+        "Host": "Dr. Tanvi",
+        "Department": "Computer Science",
+        "Photo Filename": "visitor_20261012_195701_870316.jpg",
+        "Registration Time": "2026-10-12 19:57:25",
         "Approval Status": "Pending"
     }
 ]

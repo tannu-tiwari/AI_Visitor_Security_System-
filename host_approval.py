@@ -6,6 +6,10 @@ from visitor_registration import REGISTRATION_FILE, load_registrations
 
 
 def update_approval(registration_id, decision):
+    if decision == "approve":
+        decision = "Approved"
+    elif decision == "reject":
+        decision = "Rejected"
     if decision not in ("Approved", "Rejected"):
         return False, "Invalid approval decision."
 

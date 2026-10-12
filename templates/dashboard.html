@@ -814,6 +814,19 @@
                 <section class="panel">
                     <div class="panel-heading">
                         <div>
+                            <h3>Approved Visitors</h3>
+                            <p>Mark entry for visitors approved by the host</p>
+                        </div>
+                        <span class="badge badge-green" id="approvedBadge">0 Approved</span>
+                    </div>
+                    <div id="approvedList">
+                        <div class="empty-state">Loading approved visitors...</div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-heading">
+                        <div>
                             <h3>Pending Host Approvals</h3>
                             <p>Review submitted registrations</p>
                         </div>
@@ -1119,6 +1132,54 @@
         }
     }
 
+    async function loadApprovedVisitors() {
+        try {
+            const data = await fetchJSON("/api/registrations");
+            const registrations = Array.isArray(data)
+                ? data
+                : (data.registrations || data.visitors || []);
+            const approved = registrations.filter(visitor =>
+                String(visitor["Approval Status"] || visitor.approval_status || "")
+                    .toLowerCase() === "approved"
+            );
+
+            $("approvedBadge").textContent = approved.length + " Approved";
+
+            if (!approved.length) {
+                $("approvedList").innerHTML =
+                    '<div class="empty-state">No approved visitors waiting for entry.</div>';
+                return;
+            }
+
+            $("approvedList").innerHTML = approved.map(visitor => {
+                const name = visitor.Name || visitor.name || "Visitor";
+                const id = visitor["Registration ID"] || visitor.registration_id || visitor.id || "";
+                const purpose = visitor.Purpose || visitor.purpose || "";
+                const host = visitor.Host || visitor.host || "";
+
+                return `
+                    <div class="list-item">
+                        <h4>${escapeHTML(name)}</h4>
+                        <p>Purpose: ${escapeHTML(purpose)}<br>
+                           Host: ${escapeHTML(host)}<br>
+                           Status: <span class="badge badge-green">Approved</span></p>
+                        <div class="list-actions">
+                            <button class="button button-primary small-button"
+                                data-entry-name="${escapeHTML(name)}"
+                                data-entry-id="${escapeHTML(id)}">
+                                Mark Entry
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        } catch (error) {
+            console.error("Could not load approved visitors:", error);
+            $("approvedList").innerHTML =
+                '<div class="empty-state">Could not load approved visitors.</div>';
+        }
+    }
+
     async function loadApprovals() {
         try {
             const data = await fetchJSON("/api/pending-approvals");
@@ -1176,6 +1237,7 @@
             loadLogs(),
             loadInsideVisitors(),
             loadApprovals(),
+            loadApprovedVisitors(),
             checkCamera()
         ]);
     }
@@ -1229,6 +1291,29 @@
         } finally {
             submitButton.disabled = false;
             submitButton.textContent = "Submit Registration";
+        }
+    });
+
+    $("approvedList").addEventListener("click", async event => {
+        const button = event.target.closest("[data-entry-name]");
+        if (!button) return;
+
+        const name = button.dataset.entryName;
+        if (!confirm("Mark " + name + " as entered?")) return;
+
+        button.disabled = true;
+        try {
+            const response = await fetchJSON("/mark-entry", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name })
+            });
+            alert(response.message || "Entry request sent.");
+            await Promise.all([loadInsideVisitors(), loadApprovedVisitors()]);
+        } catch (error) {
+            alert("Entry could not be recorded. Please check the Flask backend.");
+        } finally {
+            button.disabled = false;
         }
     });
 
@@ -1294,6 +1379,7 @@
         loadLogs();
         loadInsideVisitors();
         loadApprovals();
+        loadApprovedVisitors();
     }, 10000);
 </script>
 

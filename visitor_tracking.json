@@ -14,5 +14,13 @@
         "Exit Date": "2026-10-11",
         "Exit Time": "22:35:11",
         "Status": "Exited"
+    },
+    {
+        "Visitor Name": "Test Visitor",
+        "Entry Date": "2026-10-12",
+        "Entry Time": "20:13:44",
+        "Exit Date": "2026-10-12",
+        "Exit Time": "20:16:22",
+        "Status": "Exited"
     }
 ]
