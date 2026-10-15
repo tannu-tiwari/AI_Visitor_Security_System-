@@ -18,7 +18,7 @@ CASCADE_FILE = os.path.join(
 )
 
 # Face recognition settings
-CONFIDENCE_THRESHOLD = 50
+CONFIDENCE_THRESHOLD = 70
 LOG_INTERVAL = 30
 
 # Shared camera state
