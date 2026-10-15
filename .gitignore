@@ -3,3 +3,7 @@ venv/
 # Python cache
 __pycache__/
 *.py[cod]
+
+# Personal images — ignore contents, keep the folders themselves
+dataset/*
+visitor_captures/*
