@@ -43,5 +43,17 @@
         "Photo Filename": "visitor_20261012_195701_870316.jpg",
         "Registration Time": "2026-10-12 19:57:25",
         "Approval Status": "Pending"
+    },
+    {
+        "Registration ID": "VIS-20261022224850102090",
+        "Name": "Shashank Verma",
+        "Phone": "8053400860",
+        "Email": "vermashashank070205@gmail.com",
+        "Purpose": "Parent Visit",
+        "Host": "Dr. Bro",
+        "Department": "Computer Science",
+        "Photo Filename": "visitor_20261022_224828_495839.jpg",
+        "Registration Time": "2026-10-22 22:48:50",
+        "Approval Status": "Pending"
     }
 ]

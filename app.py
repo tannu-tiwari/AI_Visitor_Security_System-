@@ -3,6 +3,7 @@ import csv
 import base64
 import binascii
 from datetime import datetime
+from email_sender import send_registration_email, is_email_configured
 
 from flask import (
     Flask,
@@ -220,7 +221,7 @@ def register_new_visitor():
     if data is None:
         data = request.form
 
-    success, message = register_visitor(
+    success, message, visitor = register_visitor(
         data.get("name", ""),
         data.get("phone", ""),
         data.get("email", ""),
@@ -230,10 +231,16 @@ def register_new_visitor():
         data.get("capture_filename", "")
     )
 
+    email_sent = False
+
+    if success and visitor:
+        email_sent = send_registration_email(visitor)
+
     if request.is_json:
         return jsonify({
             "success": success,
-            "message": message
+            "message": message,
+            "email_sent": email_sent
         }), 200 if success else 400
 
     return message, 200 if success else 400

@@ -31,7 +31,7 @@ def register_visitor(
     department = department.strip()
 
     if not all([name, phone, purpose, host, department]):
-        return False, "Please fill in all required fields."
+        return False, "Please fill in all required fields.", None
 
     registrations = load_registrations()
 
@@ -54,6 +54,6 @@ def register_visitor(
         with open(REGISTRATION_FILE, "w", encoding="utf-8") as file:
             json.dump(registrations, file, indent=4)
     except OSError:
-        return False, "Could not save registration."
+        return False, "Could not save registration.", None
 
-    return True, "Visitor registered. Host approval is pending."
+    return True, "Visitor registered. Host approval is pending.", visitor
