@@ -1357,7 +1357,18 @@
                 { method: "POST" }
             );
 
-            alert(response.message || "Approval request sent.");
+            let message = response.message ||
+                (decision === "approved"
+                    ? "Visitor request approved."
+                    : "Visitor request rejected.");
+
+            if (response.success) {
+                message += response.email_sent
+                    ? " Email sent to the visitor."
+                    : " Email could not be sent.";
+            }
+
+            alert(message);
             await loadApprovals();
         } catch (error) {
             alert("Approval could not be updated. Check the backend route and decision values.");

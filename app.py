@@ -3,7 +3,11 @@ import csv
 import base64
 import binascii
 from datetime import datetime
-from email_sender import send_registration_email, is_email_configured
+from email_sender import (
+    send_registration_email,
+    send_decision_email,
+    is_email_configured
+)
 
 from flask import (
     Flask,
@@ -268,24 +272,22 @@ def process_host_approval(registration_id, decision):
         }), 400
 
     try:
-        result = update_approval(registration_id, decision)
+        success, message, visitor = update_approval(
+            registration_id, decision
+        )
 
-        if isinstance(result, tuple):
-            success, message = result
-        elif isinstance(result, bool):
-            success = result
-            message = (
-                "Approval updated."
-                if success else
-                "Approval could not be updated."
-            )
-        else:
-            success = result is not False
-            message = "Approval request processed."
+        email_sent = False
+
+        if success and visitor:
+            try:
+                email_sent = send_decision_email(visitor)
+            except Exception:
+                app.logger.exception("Could not send approval email")
 
         return jsonify({
             "success": success,
-            "message": message
+            "message": message,
+            "email_sent": email_sent
         }), 200 if success else 400
 
     except Exception:

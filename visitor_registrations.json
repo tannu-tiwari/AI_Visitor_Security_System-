@@ -54,6 +54,42 @@
         "Department": "Computer Science",
         "Photo Filename": "visitor_20261022_224828_495839.jpg",
         "Registration Time": "2026-10-22 22:48:50",
-        "Approval Status": "Pending"
+        "Approval Status": "Approved"
+    },
+    {
+        "Registration ID": "VIS-20261023093328618300",
+        "Name": "Shashank Verma",
+        "Phone": "8053400860",
+        "Email": "vermashashank070205@gmail.com",
+        "Purpose": "Meeting with Faculty",
+        "Host": "Dr. dfghfdbf",
+        "Department": "Administration",
+        "Photo Filename": "visitor_20261023_093311_788838.jpg",
+        "Registration Time": "2026-10-23 09:33:28",
+        "Approval Status": "Approved"
+    },
+    {
+        "Registration ID": "VIS-20261023094439005079",
+        "Name": "Shashank Verma",
+        "Phone": "8053400860",
+        "Email": "vermashashank070205@gmail.com",
+        "Purpose": "Maintenance",
+        "Host": "Dr. Patel",
+        "Department": "Electronics",
+        "Photo Filename": "visitor_20261023_094336_773208.jpg",
+        "Registration Time": "2026-10-23 09:44:39",
+        "Approval Status": "Approved"
+    },
+    {
+        "Registration ID": "VIS-20261023094645483499",
+        "Name": "Harsh",
+        "Phone": "1234567808",
+        "Email": "harshrajputharsh339@gmail.com",
+        "Purpose": "Maintenance",
+        "Host": "Dr. Sahab",
+        "Department": "Information Technology",
+        "Photo Filename": "visitor_20261023_094529_562675.jpg",
+        "Registration Time": "2026-10-23 09:46:45",
+        "Approval Status": "Approved"
     }
 ]
