@@ -3,7 +3,15 @@ from datetime import timedelta
 from urllib.parse import unquote, urlparse
 
 import click
-from flask import Blueprint, jsonify, redirect, render_template, request, url_for
+from flask import (
+    Blueprint,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_login import (
     LoginManager,
     current_user,
@@ -118,7 +126,9 @@ def login():
                 and user.is_active
                 and user.check_password(password)
             ):
+                session.clear()
                 login_user(user)
+                session.permanent = True
                 return _redirect_after_login(request.form.get("next", ""))
 
             error = GENERIC_LOGIN_ERROR
@@ -133,9 +143,8 @@ def login():
 
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
-    if current_user.is_authenticated:
-        logout_user()
-
+    session.clear()
+    logout_user()
     return redirect(url_for("auth.login"))
 
 

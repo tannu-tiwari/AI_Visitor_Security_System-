@@ -19,10 +19,16 @@ export function escapeHTML(value) {
 
 export async function fetchJSON(url, options = {}) {
     const response = await fetch(url, options);
+    const data = await response.json().catch(() => null);
+
     if (!response.ok) {
-        throw new Error("Request failed: " + response.status);
+        const message = data && (data.message || data.error);
+        throw new Error(
+            message || "Request failed: " + response.status
+        );
     }
-    return response.json();
+
+    return data;
 }
 
 export function showFeedback(element, message, success) {

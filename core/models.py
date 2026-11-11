@@ -47,6 +47,12 @@ class Visitor(db.Model):
     email = db.Column(db.String(200), nullable=True, default="")
     purpose = db.Column(db.String(200), nullable=False, default="")
     host = db.Column(db.String(120), nullable=False, default="")
+    host_user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     department = db.Column(db.String(120), nullable=False, default="")
     photo_filename = db.Column(db.String(255), nullable=True, default="")
     registered_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
@@ -61,6 +67,10 @@ class Visitor(db.Model):
         ),
     )
 
+    assigned_host = db.relationship(
+        "User",
+        foreign_keys=[host_user_id],
+    )
     approvals = db.relationship(
         "Approval",
         back_populates="visitor",

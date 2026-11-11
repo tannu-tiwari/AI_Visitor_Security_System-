@@ -1,4 +1,6 @@
+import logging
 import os
+import secrets
 from datetime import datetime
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -65,6 +67,21 @@ def get_hosts_for_department(department):
         ]
 
 
+def host_owns_capture(filename, host_user_id):
+    """Return True when a visitor photo belongs to this host's requests."""
+    if not filename or host_user_id is None:
+        return False
+
+    with app_scope():
+        row = db.session.execute(
+            db.select(Visitor.id).where(
+                Visitor.photo_filename == filename,
+                Visitor.host_user_id == host_user_id,
+            ).limit(1)
+        ).first()
+    return row is not None
+
+
 def _validate_host(host_id, department):
     """Return (host, error) for an active host in the submitted department."""
     try:
@@ -122,12 +139,16 @@ def register_visitor(
         now = datetime.now()
 
         visitor = Visitor(
-            registration_id=f"VIS-{now.strftime('%Y%m%d%H%M%S%f')}",
+            registration_id=(
+                f"VIS-{now.strftime('%Y%m%d%H%M%S%f')}"
+                f"{secrets.token_hex(3).upper()}"
+            ),
             name=name,
             phone=phone,
             email=email,
             purpose=purpose,
             host=host_name,
+            host_user_id=host.id,
             department=host.department.strip(),
             photo_filename=capture_filename or "",
             registered_at=now,
@@ -139,7 +160,9 @@ def register_visitor(
             commit_session()
             registration = visitor.to_dict()
         except SQLAlchemyError:
-            print("Warning: Could not save visitor registration.")
+            logging.getLogger(__name__).exception(
+                "Could not save visitor registration"
+            )
             return False, "Could not save registration.", None
 
     return True, "Visitor registered. Host approval is pending.", registration

@@ -97,8 +97,7 @@ function renderApprovals(approvals) {
         list.innerHTML = emptyStateHTML({
             icon: "🕐",
             title: "No pending approvals",
-            message: "New visitor requests will appear here for host review.",
-            action: { label: "Register a Visitor", href: "/registration" }
+            message: "New visitor requests assigned to you will appear here."
         });
         return approvals;
     }
@@ -154,8 +153,8 @@ export function initVisitorApproval() {
             ? visitorName + " — visiting " + visitorHost + ". "
             : visitorName + ". ") +
             (rejecting
-                ? "Enter the host's name and the reason for rejecting this request."
-                : "Enter the host's name to approve this request.");
+                ? "Enter the reason for rejecting this request. Your signed-in account will be recorded as the decision maker."
+                : "Your signed-in account will be recorded as the decision maker.");
 
         setButtonLoading(button, true);
 
@@ -169,15 +168,7 @@ export function initVisitorApproval() {
                 description,
                 confirmLabel: rejecting ? "Reject Visitor" : "Approve Visitor",
                 danger: rejecting,
-                fields: [
-                    {
-                        name: "decided_by",
-                        label: "Your Name (Host / Decision Maker)",
-                        type: "text",
-                        required: true,
-                        placeholder: "e.g. Dr. A. Mehta"
-                    }
-                ].concat(rejecting ? [
+                fields: rejecting ? [
                     {
                         name: "rejection_reason",
                         label: "Rejection Reason",
@@ -185,7 +176,7 @@ export function initVisitorApproval() {
                         required: true,
                         placeholder: "Why is this visitor being rejected?"
                     }
-                ] : []),
+                ] : [],
                 onConfirm: async (values) => {
                     response = await fetchJSON(
                         "/host-approval/" + encodeURIComponent(id) + "/" +
@@ -196,7 +187,6 @@ export function initVisitorApproval() {
                                 "Content-Type": "application/json"
                             },
                             body: JSON.stringify({
-                                decided_by: values.decided_by,
                                 rejection_reason: values.rejection_reason || ""
                             })
                         }

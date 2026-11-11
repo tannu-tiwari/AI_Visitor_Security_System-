@@ -27,6 +27,10 @@ USER_COLUMN_ADDITIONS = {
     "department": "VARCHAR(120)",
 }
 
+VISITOR_COLUMN_ADDITIONS = {
+    "host_user_id": "INTEGER REFERENCES users(id) ON DELETE SET NULL",
+}
+
 
 def resolve_database_path(database_path=None):
     """Return the configured SQLite file path (absolute)."""
@@ -82,6 +86,7 @@ def init_database(app, database_path=None):
         from . import models  # noqa: F401
         db.create_all()
         ensure_user_schema()
+        ensure_visitor_schema()
 
     return path
 
@@ -115,6 +120,74 @@ def ensure_user_schema():
                 )
             )
             added.append(column_name)
+
+    return added
+
+
+def ensure_visitor_schema():
+    """
+    Add the host account link to a pre-assignment visitors table.
+
+    The column is nullable because historical registrations only stored a host
+    name and some names do not match an account. A unique, case-insensitive
+    name match is backfilled; ambiguous names stay unassigned and are visible
+    to administrators only.
+    """
+    inspector = inspect(db.engine)
+    if "visitors" not in inspector.get_table_names():
+        return []
+
+    existing_columns = {
+        column["name"] for column in inspector.get_columns("visitors")
+    }
+    added = []
+
+    with db.engine.begin() as connection:
+        for column_name, definition in VISITOR_COLUMN_ADDITIONS.items():
+            if column_name in existing_columns:
+                continue
+            connection.execute(
+                text(
+                    f"ALTER TABLE visitors ADD COLUMN "
+                    f"{column_name} {definition}"
+                )
+            )
+            added.append(column_name)
+
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_visitors_host_user_id "
+                "ON visitors (host_user_id)"
+            )
+        )
+
+        connection.execute(
+            text("""
+                UPDATE visitors
+                SET host_user_id = (
+                    SELECT users.id
+                    FROM users
+                    WHERE users.role = 'host'
+                      AND users.is_active = 1
+                      AND trim(users.full_name) <> ''
+                      AND lower(trim(users.full_name)) =
+                          lower(trim(visitors.host))
+                    ORDER BY users.id
+                    LIMIT 1
+                )
+                WHERE host_user_id IS NULL
+                  AND trim(visitors.host) <> ''
+                  AND (
+                    SELECT count(*)
+                    FROM users
+                    WHERE users.role = 'host'
+                      AND users.is_active = 1
+                      AND trim(users.full_name) <> ''
+                      AND lower(trim(users.full_name)) =
+                          lower(trim(visitors.host))
+                  ) = 1
+            """)
+        )
 
     return added
 

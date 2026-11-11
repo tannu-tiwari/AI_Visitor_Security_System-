@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -16,7 +17,11 @@ from sqlalchemy import inspect, text  # noqa: E402
 from werkzeug.security import generate_password_hash  # noqa: E402
 
 import app as app_module  # noqa: E402
-from core.database import db, ensure_user_schema  # noqa: E402
+from core.database import (  # noqa: E402
+    db,
+    ensure_user_schema,
+    ensure_visitor_schema,
+)
 from core.models import User  # noqa: E402
 
 app = app_module.app
@@ -75,6 +80,27 @@ class AuthTestCase(unittest.TestCase):
         if next_url:
             data["next"] = next_url
         return self.client.post("/login", data=data)
+
+    def register_for(
+        self,
+        host_id,
+        name,
+        department="Computer Science",
+        purpose="Meeting with Faculty",
+        capture_filename="",
+    ):
+        return self.client.post("/register-visitor", json={
+            "name": name,
+            "phone": "9990001234",
+            "email": "",
+            "purpose": purpose,
+            "host_id": host_id,
+            "department": department,
+            "capture_filename": capture_filename,
+        })
+
+    def registration_ids(self, records):
+        return [record["Registration ID"] for record in records]
 
     def test_user_table_schema(self):
         with app.app_context():
@@ -195,6 +221,73 @@ class AuthTestCase(unittest.TestCase):
         self.assertIn("/login", response.headers["Location"])
 
         self.assertEqual(self.client.get("/auth-test").status_code, 302)
+
+    def test_logout_invalidates_session_and_disables_cached_pages(self):
+        self.create_user()
+        self.login()
+
+        protected = self.client.get("/")
+        self.assertEqual(protected.status_code, 200)
+        cache_control = protected.headers["Cache-Control"].lower()
+        self.assertIn("no-store", cache_control)
+        self.assertIn("no-cache", cache_control)
+        self.assertEqual(protected.headers["Pragma"], "no-cache")
+        self.assertEqual(protected.headers["Expires"], "0")
+
+        with self.client.session_transaction() as session:
+            self.assertIn("_user_id", session)
+
+        response = self.client.post("/logout")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response.headers["Location"])
+
+        with self.client.session_transaction() as session:
+            self.assertNotIn("_user_id", session)
+            self.assertNotIn("_fresh", session)
+
+        for path, expected in (
+            ("/", 302),
+            ("/registration", 302),
+            ("/users", 302),
+            ("/auth-test", 302),
+            ("/api/registrations", 401),
+            ("/api/users", 401),
+        ):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, expected, path)
+            if expected == 302:
+                self.assertIn("/login", response.headers["Location"], path)
+
+    def test_all_non_public_routes_require_authentication(self):
+        public_endpoints = {
+            "static",
+            "auth.login",
+            "auth.logout",
+            "health_check",
+        }
+
+        for rule in app.url_map.iter_rules():
+            if rule.endpoint in public_endpoints:
+                continue
+
+            path = re.sub(r"<[^>]+>", "1", rule.rule)
+            methods = sorted(rule.methods - {"HEAD", "OPTIONS"})
+            method = "GET" if "GET" in methods else methods[0]
+            response = self.client.open(
+                path,
+                method=method,
+                json={} if method != "GET" else None,
+            )
+
+            self.assertIn(
+                response.status_code,
+                (302, 401),
+                f"{method} {rule.rule} was not protected",
+            )
+            if response.status_code == 302:
+                self.assertIn("/login", response.headers["Location"], rule.rule)
+            else:
+                self.assertIn("application/json", response.content_type, rule.rule)
 
     def test_authenticated_login_page_redirects_to_dashboard(self):
         self.create_user()
@@ -380,12 +473,77 @@ class AuthTestCase(unittest.TestCase):
             self.assertTrue(user.check_password("legacy password"))
             self.assertEqual(user.role_label, "Administrator")
 
+    def test_visitor_schema_adds_and_backfills_host_assignment(self):
+        host_id = self.create_user(
+            username="legacy.host",
+            full_name="Dr. Rao",
+            role="host",
+            department="Computer Science",
+        )
+
+        with app.app_context():
+            db.session.remove()
+            with db.engine.begin() as connection:
+                connection.execute(text("DROP TABLE approvals"))
+                connection.execute(text("DROP TABLE visits"))
+                connection.execute(text("DROP TABLE visitors"))
+                connection.execute(text("""
+                    CREATE TABLE visitors (
+                        id INTEGER NOT NULL,
+                        registration_id VARCHAR(64) NOT NULL,
+                        name VARCHAR(120) NOT NULL,
+                        phone VARCHAR(40) NOT NULL DEFAULT '',
+                        email VARCHAR(200),
+                        purpose VARCHAR(200) NOT NULL DEFAULT '',
+                        host VARCHAR(120) NOT NULL DEFAULT '',
+                        department VARCHAR(120) NOT NULL DEFAULT '',
+                        photo_filename VARCHAR(255),
+                        registered_at DATETIME NOT NULL,
+                        approval_status VARCHAR(20) NOT NULL DEFAULT 'Pending',
+                        PRIMARY KEY (id),
+                        UNIQUE (registration_id)
+                    )
+                """))
+                connection.execute(text("""
+                    INSERT INTO visitors (
+                        id, registration_id, name, phone, email, purpose,
+                        host, department, photo_filename, registered_at,
+                        approval_status
+                    ) VALUES
+                    (1, 'VIS-LEGACY-1', 'Assigned Visitor', '9990001111', NULL,
+                     'Meeting', 'Dr. Rao', 'Computer Science', NULL,
+                     '2026-01-01 10:00:00', 'Pending'),
+                    (2, 'VIS-LEGACY-2', 'Unassigned Visitor', '9990002222', NULL,
+                     'Meeting', 'Unknown Host', 'Computer Science', NULL,
+                     '2026-01-01 11:00:00', 'Pending')
+                """))
+
+            added = ensure_visitor_schema()
+            self.assertEqual(added, ["host_user_id"])
+            self.assertEqual(ensure_visitor_schema(), [])
+
+            columns = {
+                column["name"]
+                for column in inspect(db.engine).get_columns("visitors")
+            }
+            self.assertIn("host_user_id", columns)
+
+            rows = db.session.execute(
+                text("""
+                    SELECT registration_id, host_user_id
+                    FROM visitors ORDER BY id
+                """)
+            ).mappings().all()
+            self.assertEqual(rows[0]["host_user_id"], host_id)
+            self.assertIsNone(rows[1]["host_user_id"])
+
     def test_rbac_page_permissions(self):
         cases = {
             "admin": {
                 "allowed": (
                     "/", "/registration", "/recognition", "/approvals",
                     "/approval-history", "/inside-visitors", "/visitor-history",
+                    "/users",
                 ),
                 "denied": (),
             },
@@ -394,13 +552,13 @@ class AuthTestCase(unittest.TestCase):
                     "/", "/registration", "/recognition",
                     "/inside-visitors", "/visitor-history",
                 ),
-                "denied": ("/approvals", "/approval-history"),
+                "denied": ("/approvals", "/approval-history", "/users"),
             },
             "host": {
                 "allowed": ("/", "/approvals", "/approval-history"),
                 "denied": (
                     "/registration", "/recognition",
-                    "/inside-visitors", "/visitor-history",
+                    "/inside-visitors", "/visitor-history", "/users",
                 ),
             },
         }
@@ -425,6 +583,7 @@ class AuthTestCase(unittest.TestCase):
             "/api/registrations",
             "/api/pending-approvals",
             "/api/approval-history",
+            "/api/users",
         ):
             response = self.client.get(path)
             self.assertEqual(response.status_code, 401, path)
@@ -442,6 +601,7 @@ class AuthTestCase(unittest.TestCase):
             "/api/approval-history",
             "/api/visitor-logs",
             "/api/open-visitors",
+            "/api/users",
         ):
             self.assertEqual(self.client.get(path).status_code, 200, path)
         self.client.post("/logout")
@@ -449,7 +609,11 @@ class AuthTestCase(unittest.TestCase):
         self.login_as("security")
         for path in ("/api/registrations", "/api/visitor-logs", "/api/open-visitors"):
             self.assertEqual(self.client.get(path).status_code, 200, path)
-        for path in ("/api/pending-approvals", "/api/approval-history"):
+        for path in (
+            "/api/pending-approvals",
+            "/api/approval-history",
+            "/api/users",
+        ):
             response = self.client.get(path)
             self.assertEqual(response.status_code, 403, path)
             self.assertIn("application/json", response.content_type)
@@ -474,6 +638,7 @@ class AuthTestCase(unittest.TestCase):
             self.assertEqual(self.client.get(path).status_code, 200, path)
         for path in (
             "/api/registrations",
+            "/api/users",
             "/visitor-history",
             "/api/visitor-logs",
             "/api/open-visitors",
@@ -512,14 +677,16 @@ class AuthTestCase(unittest.TestCase):
         )
         self.client.post("/logout")
 
-        self.login_as("host")
+        self.login(username="approval.host")
         self.assertEqual(
             self.client.post(
                 f"/host-approval/{visitor['Registration ID']}/approve",
-                json={"decided_by": "Host User", "rejection_reason": ""},
+                json={"decided_by": "Impostor", "rejection_reason": ""},
             ).status_code,
             200,
         )
+        history = self.client.get("/api/approval-history").get_json()
+        self.assertEqual(history[0]["Decision By"], "Host User")
         self.assertEqual(
             self.client.post(
                 "/register-visitor", json={"name": "Blocked Visitor"}
@@ -533,6 +700,123 @@ class AuthTestCase(unittest.TestCase):
             403,
         )
         self.assertEqual(self.client.get("/api/registrations").status_code, 403)
+
+    def test_hosts_only_see_and_decide_their_own_requests(self):
+        host_one_id = self.create_user(
+            username="host.one",
+            full_name="Host One",
+            role="host",
+            department="Computer Science",
+        )
+        host_two_id = self.create_user(
+            username="host.two",
+            full_name="Host Two",
+            role="host",
+            department="Information Technology",
+        )
+
+        self.login_as("admin")
+        self.assertEqual(
+            self.register_for(
+                host_one_id,
+                "Visitor One",
+                department="Computer Science",
+                capture_filename="visitor-one.jpg",
+            ).status_code,
+            200,
+        )
+        self.assertEqual(
+            self.register_for(
+                host_two_id,
+                "Visitor Two",
+                department="Information Technology",
+                capture_filename="visitor-two.jpg",
+            ).status_code,
+            200,
+        )
+        admin_pending = self.client.get("/api/pending-approvals").get_json()
+        self.assertEqual(
+            {record["Name"] for record in admin_pending},
+            {"Visitor One", "Visitor Two"},
+        )
+        visitor_two_id = next(
+            record["Registration ID"]
+            for record in admin_pending
+            if record["Name"] == "Visitor Two"
+        )
+        self.client.post("/logout")
+
+        self.login(username="host.one")
+        host_one_pending = self.client.get("/api/pending-approvals").get_json()
+        self.assertEqual(
+            [record["Name"] for record in host_one_pending],
+            ["Visitor One"],
+        )
+        visitor_one_id = host_one_pending[0]["Registration ID"]
+
+        self.assertEqual(
+            self.client.post(
+                f"/host-approval/{visitor_two_id}/approve",
+                json={"rejection_reason": ""},
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.post(
+                f"/host-approval/{visitor_one_id}/approve",
+                json={"rejection_reason": ""},
+            ).status_code,
+            200,
+        )
+        host_one_history = self.client.get("/api/approval-history").get_json()
+        self.assertEqual(
+            [record["Name"] for record in host_one_history],
+            ["Visitor One"],
+        )
+        self.assertEqual(host_one_history[0]["Decision By"], "Host One")
+        history_page = self.client.get("/approval-history").get_data(as_text=True)
+        self.assertIn("Visitor One", history_page)
+        self.assertNotIn("Visitor Two", history_page)
+        self.assertEqual(
+            self.client.get("/visitor-captures/visitor-two.jpg").status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.get("/visitor-captures/visitor-one.jpg").status_code,
+            404,
+        )
+        self.client.post("/logout")
+
+        self.login(username="host.two")
+        self.assertEqual(
+            [
+                record["Name"]
+                for record in self.client.get("/api/pending-approvals").get_json()
+            ],
+            ["Visitor Two"],
+        )
+        self.assertEqual(
+            [
+                record["Name"]
+                for record in self.client.get("/api/approval-history").get_json()
+            ],
+            [],
+        )
+        self.assertEqual(
+            self.client.post(
+                f"/host-approval/{visitor_two_id}/approve",
+                json={"rejection_reason": ""},
+            ).status_code,
+            200,
+        )
+        self.client.post("/logout")
+
+        self.login(username="admin_user")
+        admin_history = self.client.get("/api/approval-history").get_json()
+        self.assertEqual(
+            {record["Name"] for record in admin_history},
+            {"Visitor One", "Visitor Two"},
+        )
 
     def test_host_directory_endpoints_are_dynamic(self):
         cs_one = self.create_user(
@@ -721,11 +1005,13 @@ class AuthTestCase(unittest.TestCase):
         nav = self.nav_html()
         for label in (
             "Dashboard", "Visitor Registration", "Face Recognition",
-            "Approvals", "Inside Visitors", "Visitor History", "User Management",
+            "Approvals", "Approval History", "Inside Visitors",
+            "Visitor History", "User Management",
         ):
             self.assertIn(label, nav)
         self.assertNotIn("My Approval Requests", nav)
-        self.assertNotIn("Approval History", nav)
+        self.assertIn('href="/users"', nav)
+        self.assertNotIn("nav-link-disabled", nav)
         body = self.client.get("/").get_data(as_text=True)
         self.assertIn("Ada Admin", body)
         self.assertIn("Administrator", body)
@@ -774,6 +1060,122 @@ class AuthTestCase(unittest.TestCase):
     def test_health_and_login_remain_public(self):
         self.assertEqual(self.client.get("/health").status_code, 200)
         self.assertEqual(self.client.get("/login").status_code, 200)
+
+    def test_admin_can_manage_users_and_hosts(self):
+        admin_id = self.create_user(
+            username="site.admin",
+            full_name="Site Admin",
+            role="admin",
+        )
+        self.login(username="site.admin")
+
+        self.assertEqual(self.client.get("/users").status_code, 200)
+        users = self.client.get("/api/users").get_json()["users"]
+        self.assertEqual([user["username"] for user in users], ["site.admin"])
+
+        response = self.client.post("/api/users", json={
+            "username": "new.host",
+            "full_name": "New Host",
+            "email": "new.host@example.com",
+            "role": "host",
+            "department": "Computer Science",
+            "password": "new host password",
+        })
+        self.assertEqual(response.status_code, 201)
+        created = response.get_json()["user"]
+        self.assertEqual(created["role"], "host")
+        self.assertNotIn("password", created)
+        self.assertNotIn("password_hash", created)
+
+        departments = self.client.get("/api/departments").get_json()["departments"]
+        self.assertIn("Computer Science", departments)
+        hosts = self.client.get(
+            "/api/hosts",
+            query_string={"department": "Computer Science"},
+        ).get_json()["hosts"]
+        self.assertIn(
+            (created["id"], "New Host"),
+            [(host["id"], host["full_name"]) for host in hosts],
+        )
+
+        response = self.client.patch(
+            f"/api/users/{created['id']}",
+            json={"role": "security", "department": ""},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["user"]["role"], "security")
+        self.assertNotIn(
+            "Computer Science",
+            self.client.get("/api/departments").get_json()["departments"],
+        )
+
+        response = self.client.patch(
+            f"/api/users/{created['id']}",
+            json={"is_active": False},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.get_json()["user"]["is_active"])
+
+        self.assertEqual(
+            self.client.patch(
+                f"/api/users/{admin_id}",
+                json={"role": "security"},
+            ).status_code,
+            400,
+        )
+        self.assertEqual(
+            self.client.patch(
+                f"/api/users/{admin_id}",
+                json={"is_active": False},
+            ).status_code,
+            400,
+        )
+        self.assertEqual(
+            self.client.post("/api/users", json={
+                "username": "no.department",
+                "full_name": "No Department",
+                "email": "",
+                "role": "host",
+                "department": "",
+                "password": "password",
+            }).status_code,
+            400,
+        )
+        self.assertEqual(
+            self.client.post("/api/users", json={
+                "username": "bad.role",
+                "full_name": "Bad Role",
+                "email": "",
+                "role": "superuser",
+                "department": "",
+                "password": "password",
+            }).status_code,
+            400,
+        )
+
+    def test_user_management_is_admin_only(self):
+        self.login_as("security")
+        self.assertEqual(self.client.get("/users").status_code, 403)
+        self.assertEqual(self.client.get("/api/users").status_code, 403)
+        self.assertEqual(
+            self.client.post("/api/users", json={
+                "username": "blocked",
+                "full_name": "Blocked",
+                "role": "host",
+                "department": "Computer Science",
+                "password": "password",
+            }).status_code,
+            403,
+        )
+        self.client.post("/logout")
+
+        self.login_as("host")
+        self.assertEqual(self.client.get("/users").status_code, 403)
+        self.assertEqual(self.client.get("/api/users").status_code, 403)
+        self.assertEqual(
+            self.client.patch("/api/users/1", json={"is_active": False}).status_code,
+            403,
+        )
 
     def test_create_user_cli_hashes_password(self):
         runner = app.test_cli_runner()

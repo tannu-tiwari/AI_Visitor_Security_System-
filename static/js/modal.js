@@ -101,16 +101,37 @@ function buildField(field) {
     label.setAttribute("for", "modal-field-" + field.name);
 
     const input = document.createElement(
-        field.type === "textarea" ? "textarea" : "input"
+        field.type === "textarea"
+            ? "textarea"
+            : (field.type === "select" ? "select" : "input")
     );
     input.name = field.name;
     input.id = "modal-field-" + field.name;
-    if (field.type !== "textarea") {
-        input.type = field.type || "text";
+
+    if (field.type === "select") {
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = field.placeholder || "Select an option";
+        if (field.required) {
+            placeholder.disabled = true;
+        }
+        input.appendChild(placeholder);
+
+        for (const option of field.options || []) {
+            const optionEl = document.createElement("option");
+            optionEl.value = option.value;
+            optionEl.textContent = option.label;
+            input.appendChild(optionEl);
+        }
+    } else {
+        if (field.type !== "textarea") {
+            input.type = field.type || "text";
+        }
+        if (field.placeholder) {
+            input.placeholder = field.placeholder;
+        }
     }
-    if (field.placeholder) {
-        input.placeholder = field.placeholder;
-    }
+
     if (field.initialValue !== undefined) {
         input.value = field.initialValue;
     }

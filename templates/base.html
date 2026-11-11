@@ -68,7 +68,7 @@
                 </a>
                 {% endif %}
 
-                {% if role == 'host' %}
+                {% if role in ('admin', 'host') %}
                 <a href="{{ url_for('approval_history_page') }}"
                     class="nav-link{{ ' active' if request.path == '/approval-history' }}"
                     aria-current="{{ 'page' if request.path == '/approval-history' }}">
@@ -93,11 +93,12 @@
                 {% endif %}
 
                 {% if role == 'admin' %}
-                <span class="nav-link nav-link-disabled" aria-disabled="true">
+                <a href="{{ url_for('users_page') }}"
+                    class="nav-link{{ ' active' if request.path == '/users' }}"
+                    aria-current="{{ 'page' if request.path == '/users' }}">
                     <span class="nav-icon">👤</span>
                     User Management
-                    <span class="nav-badge">Soon</span>
-                </span>
+                </a>
                 {% endif %}
             </nav>
 
@@ -152,6 +153,7 @@
         </div>
     </div>
 
+    <script type="module" src="{{ url_for('static', filename='js/session-guard.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/status-pill.js') }}"></script>
     {% block scripts %}{% endblock %}
 

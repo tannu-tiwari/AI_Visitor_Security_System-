@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}User Management · AI Visitor Security System{% endblock %}
+
+{% block page_title %}User Management{% endblock %}
+{% block page_subtitle %}Create and manage administrator, security and host accounts{% endblock %}
+
+{% block content %}
+
+<section class="panel table-panel">
+    <div class="panel-heading">
+        <div>
+            <h3>Application Accounts</h3>
+            <p>Hosts with a department appear in the visitor registration form</p>
+        </div>
+        <button class="button button-primary small-button" id="addUserButton">
+            Add User
+        </button>
+    </div>
+
+    <div class="records-toolbar">
+        <input class="search-input" type="search" id="userSearch"
+            placeholder="Search name, username, email, role or department...">
+        <button class="button button-secondary" id="refreshUsersButton">
+            Refresh
+        </button>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Department</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="usersBody">
+                <tr>
+                    <td colspan="7">
+                        <div class="loading-state">
+                            <span class="spinner"></span> Loading accounts...
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="notice">
+        Deactivating an account prevents login without deleting its history.
+        You cannot remove your own administrator role or deactivate your own account.
+        Host accounts require a department.
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/users.js') }}"></script>
+{% endblock %}

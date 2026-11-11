@@ -11,13 +11,19 @@ approval, and tracks who is currently inside through a security dashboard.
 - Visitor registration with a live captured photo.
 - Department and host dropdowns populated from active `host` accounts in the
   SQLite `users` table (hosts filtered by department).
-- Host approval / rejection workflow with host name and rejection reason.
+- Host approval / rejection workflow with the recorded decision maker and rejection reason.
 - Visitor entry and exit tracking (who is currently inside).
 - Optional email notifications (registration + approval/rejection emails).
 - Multi-page dashboard with sidebar navigation: overview, registration,
   recognition, approvals, approval history, inside visitors and visitor history.
 - Role-based access control (Administrator, Security Guard, Host) with
   role-specific navigation and server-side protection on pages and APIs.
+- Administrator User Management: create accounts, edit roles/departments,
+  reset passwords and activate/deactivate accounts without deleting history.
+- Host-specific approval queues: hosts only see and decide requests assigned
+  to their own account; administrators can review all requests.
+- Logout invalidates the Flask-Login session and protected responses are sent
+  with `no-store` cache headers for safe browser-back behavior.
 - Custom modal dialogs for approvals and entry/exit confirmations (no native
   browser popups).
 - Toast notifications and loading indicators for all actions.
@@ -86,9 +92,11 @@ approval, and tracks who is currently inside through a security dashboard.
 Visitor registrations, approval decisions, entry/exit visits, recognition
 events and application user accounts are stored in a local SQLite database at
 `data/visitor_management.db`. The tables are created automatically when the app
-starts, so no manual setup is needed. On startup the app also adds the `role` and
-`department` columns to an older `users` table if they are missing; existing
-accounts are preserved and are not given a role automatically.
+starts, so no manual setup is needed. On startup the app also adds missing
+`role`/`department` user columns and the visitor `host_user_id` ownership column;
+existing accounts and visitor records are preserved and are not given a role
+automatically. Legacy visitor ownership is backfilled only when the stored host
+name uniquely matches an active host account.
 
 To use a different database file (for example for testing), set the
 `VISITOR_DB_PATH` environment variable before starting the app:
@@ -170,24 +178,31 @@ unknown usernames, wrong passwords and inactive accounts.
 
 The three roles are:
 
-- **Administrator** — full access to every page/API (User Management is not
-  implemented yet and appears as a disabled "Soon" item).
+- **Administrator** — full access including User Management, all approvals and
+  approval history.
 - **Security Guard** — dashboard, visitor registration, face recognition, inside
-  visitors and visitor history.
-- **Host** — dashboard, pending approval requests and approval history.
+  visitors and visitor history. Cannot approve or reject requests.
+- **Host** — dashboard plus only the approval requests assigned to their own
+  account and their own approval history. Cannot use security-only pages.
 
 Pages and APIs are protected on the server with decorators from
 `core/permissions.py`; hiding sidebar links is only a convenience, not the
 security boundary. Unauthenticated page requests redirect to `/login` with a
 safe `next`; unauthenticated API requests return `401` JSON. Authenticated users
 without the required role get a `403` (HTML page or JSON, depending on the
-request). `/health` and `/login` are public.
+request). `/health`, `/login`, and `POST /logout` are public.
 
 Role-specific dashboard data is also enforced: Administrators see visitor
-activity, pending approvals and inside visitors; Security Guards see visitor
-activity and inside visitors; Hosts see pending approvals only. In this step
-hosts see **all** pending approvals — assigning approvals to specific hosts and
-host-level filtering are deferred to a later step.
+activity, all pending approvals and inside visitors; Security Guards see visitor
+activity and inside visitors; Hosts see only approvals assigned to them.
+Approval ownership is checked again on every approve/reject action, so a host
+cannot act on another host's request by guessing its registration ID.
+
+Logout clears the Flask-Login session and remember-cookie state, then redirects
+to `/login`. Non-static responses (pages and APIs) are sent with
+`Cache-Control: no-store`, `Pragma: no-cache` and `Expires: 0`; a small
+`session-guard.js` reloads pages restored from the browser back-forward cache.
+Directly reopening any protected URL after logout redirects to login.
 
 1. Set a `SECRET_KEY` in `.env` (see `.env.example`). Without it the app starts
    with an ephemeral key and logs a warning, but every restart invalidates
@@ -216,6 +231,10 @@ host-level filtering are deferred to a later step.
      --role host --department "Computer Science"
    ```
 
+   Administrators can also manage accounts in the browser at `/users`, or through
+   `GET/POST /api/users` and `PATCH /api/users/<id>`. Accounts are deactivated
+   rather than deleted so approval/visit history is preserved.
+
 3. Assign a role to an account created before roles existed (or change one):
 
    ```bash
@@ -235,7 +254,7 @@ Set `SESSION_COOKIE_SECURE=True` in `.env` only when serving over HTTPS.
 
 ### Tests
 
-The auth/RBAC tests use a temporary SQLite database and never touch
+The 33 auth/RBAC/ownership tests use a temporary SQLite database and never touch
 `data/visitor_management.db`:
 
 ```bash
@@ -271,9 +290,9 @@ skipped.
    from the live feed (the form appears after capture) and fill in the
    registration details. Choose a department (loaded from active host accounts),
    then choose the host from that department's active hosts.
-3. **Host approval** — the request appears on the *Host Approvals* page; a
-   modal dialog asks for the host's name (and, when rejecting, a mandatory
-   reason) before the decision is submitted.
+3. **Host approval** — the request appears only for the assigned host (admins
+   see all requests). The decision maker is recorded from the signed-in account;
+   rejecting requires a reason in the modal.
 4. **Mark entry** — approved visitors appear on the *Inside Visitors* page;
    click "Mark Entry" and confirm the visitor in the dialog.
 5. **Mark exit** — visitors currently inside appear on the same page; click
@@ -287,6 +306,9 @@ skipped.
 8. **Review history** — the *Visitor History* page lists every registration
    (searchable and filterable, including date ranges) plus all recognition
    events with their own search. Long lists are paginated 10 per page.
+9. **Manage users** — administrators can open *User Management* (`/users`) to
+   create accounts, change roles/departments, reset passwords and
+   activate/deactivate users without deleting their history.
 
 ## Project Structure
 
@@ -297,9 +319,10 @@ core/                         Backend modules used by app.py
     models.py                 Visitor, Approval, Visit, RecognitionEvent, User models
     auth.py                   Flask-Login setup, login/logout routes, user CLIs
     permissions.py            Role-based access decorators and 401/403 responses
+    users.py                  Admin user list/create/update validation
     email_sender.py           Registration / decision emails (SMTP)
     face_recognition.py       Live recognition + MJPEG streaming module
-    host_approval.py          Host approval logic
+    host_approval.py          Host-filtered approvals + ownership-checked decisions
     visitor_logs.py           Recognition logging + entry/exit tracking
     visitor_registration.py   Registration logic + active-host directory queries
 scripts/                      Standalone utilities (run from the project root)
@@ -314,8 +337,9 @@ templates/                    Jinja templates (page markup)
     dashboard.html            Overview page (role-aware stats + summaries)
     registration.html         Photo capture + visitor registration form
     recognition.html          Live camera feed + recognition status
-    approvals.html            Pending host approvals (approve / reject)
+    approvals.html            Assigned pending host approvals (approve / reject)
     approval_history.html     Recorded approval decisions (search + pagination)
+    users.html                Admin user management (create/edit/deactivate)
     inside_visitors.html      Entry and exit management
     visitor_history.html      Visitor records (search/filters/dates) + recognition logs
 static/styles/                Dashboard CSS, split by component
@@ -323,9 +347,10 @@ static/js/                    Shared JavaScript modules (utils, camera,
                              photo capture, registration, logs, approvals,
                              approval history, entry/exit, status pill, modal
                              dialogs, toast notifications, loading indicators,
-                             empty states, visitor records, pagination)
-static/js/pages/             One entry module per page (incl. login.js)
-tests/                       Standard-library unittest suite (auth, RBAC, hosts)
+                             empty states, visitor records, pagination,
+                             session-guard)
+static/js/pages/             One entry module per page (incl. login.js, users.js)
+tests/                       Standard-library unittest suite (33 auth/RBAC/ownership tests)
 data/                         Runtime data
     visitor_management.db       SQLite database (auto-created, gitignored)
     visitor_registrations.json  Legacy registrations (migrated, kept on disk)
@@ -351,12 +376,13 @@ login is required.
 | GET | `/` | admin, security, host | Role-aware dashboard overview |
 | GET | `/registration` | admin, security | Visitor registration page |
 | GET | `/recognition` | admin, security | Face recognition page |
-| GET | `/approvals` | admin, host | Host approvals page |
-| GET | `/approval-history` | admin, host | Approval history page |
+| GET | `/approvals` | admin, host | Assigned host approvals page |
+| GET | `/approval-history` | admin, host | Approval history page (host-filtered) |
+| GET | `/users` | admin | User Management page |
 | GET | `/inside-visitors` | admin, security | Inside visitors page |
 | GET | `/visitor-history` | admin, security | Visitor history page |
 | GET/POST | `/login` | Public | Log in (GET shows the form) |
-| POST | `/logout` | Public (POST) | Log out and return to the login page |
+| POST | `/logout` | Public (POST) | Clear the session and return to login |
 | GET | `/auth-test` | Any logged-in user | Session check |
 | GET | `/health` | Public | Health check |
 | GET | `/video_feed` | admin, security | Live MJPEG camera feed |
@@ -366,12 +392,14 @@ login is required.
 | GET | `/api/registrations` | admin, security | All registrations |
 | GET | `/api/departments` | admin, security | Distinct departments of active host accounts |
 | GET | `/api/hosts?department=<name>` | admin, security | Active hosts (`id`, `full_name`) in a department |
-| GET | `/api/pending-approvals` | admin, host | Pending host approvals (all hosts this step) |
-| GET | `/api/approval-history` | admin, host | Approved/rejected decisions, newest first |
-| GET | `/visitor-captures/<filename>` | admin, security, host | Saved visitor photo (host approvals) |
+| GET | `/api/pending-approvals` | admin, host | Pending approvals (hosts see only their own) |
+| GET | `/api/approval-history` | admin, host | Approved/rejected decisions (host-filtered) |
+| GET/POST | `/api/users` | admin | List or create user accounts |
+| PATCH | `/api/users/<id>` | admin | Update role, department, password or active status |
+| GET | `/visitor-captures/<filename>` | admin, security, host | Saved visitor photo (hosts: own visitors only) |
 | POST | `/save-capture` | admin, security | Save captured visitor photo |
-| POST | `/register-visitor` | admin, security | Register a visitor (`host_id` + `department`; host is resolved and validated) |
-| POST | `/host-approval/<id>/<decision>` | admin, host | Approve / reject a request |
+| POST | `/register-visitor` | admin, security | Register a visitor (`host_id` + `department`; host is resolved, validated and recorded as `host_user_id`) |
+| POST | `/host-approval/<id>/<decision>` | admin, host | Approve / reject an assigned request |
 | POST | `/mark-entry` | admin, security | Record visitor entry |
 | POST | `/mark-exit` | admin, security | Record visitor exit |
 
@@ -392,14 +420,18 @@ login is required.
   recorded" — the app never fabricates values.
 - Accounts upgraded from the pre-role schema show "Unassigned" and are denied
   protected pages until `flask --app app assign-role` gives them a role.
-- Hosts currently see every pending approval. Per-host assignment/filtering and
-  the User Management screen are intentionally not part of this step.
+- New registrations store both the resolved host's `full_name` and
+  `host_user_id`; approval ownership and filtering use `host_user_id`. On startup
+  the app adds this column if needed and backfills it only for legacy visitors
+  whose stored host name uniquely matches an active host account. Ambiguous,
+  missing or departed-host records stay unassigned and are visible only to
+  administrators.
 - The registration form's Department dropdown lists distinct departments from
   active `host` accounts, and the Host dropdown lists active hosts in the chosen
   department. A host without a department, an inactive host, a non-host user or a
-  mismatched department is rejected by `/register-visitor`. Visitor records store
-  the resolved host's `full_name` and department, so the approval workflow and
-  history remain unchanged.
+  mismatched department is rejected by `/register-visitor`.
+- Do not delete accounts to remove access; deactivate them in User Management so
+  their historical approvals and visit records remain attributed.
 - Back up `data/visitor_management.db` to keep a copy of all visitor records.
   The legacy JSON/CSV files are only a pre-migration snapshot; the app does not
   keep them in sync any more.

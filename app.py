@@ -23,7 +23,12 @@ from werkzeug.utils import secure_filename
 
 from core.auth import init_auth
 from core.database import init_database
-from core.permissions import host_required, roles_required, security_required
+from core.permissions import (
+    admin_required,
+    host_required,
+    roles_required,
+    security_required,
+)
 from core.visitor_logs import (
     load_logs,
     mark_entry,
@@ -34,6 +39,7 @@ from core.visitor_logs import (
 from core.visitor_registration import (
     get_host_departments,
     get_hosts_for_department,
+    host_owns_capture,
     register_visitor,
     load_registrations
 )
@@ -47,6 +53,12 @@ from core.host_approval import (
 from core.face_recognition import (
     generate_frames,
     camera_available
+)
+
+from core.users import (
+    create_user_account,
+    list_users,
+    update_user_account,
 )
 
 
@@ -79,6 +91,19 @@ app.config["SECRET_KEY"] = SECRET_KEY
 
 DATABASE_PATH = init_database(app)
 init_auth(app)
+
+
+@app.after_request
+def prevent_authenticated_page_caching(response):
+    """Keep protected pages out of normal caches and browser history caches."""
+    if request.endpoint != "static":
+        response.headers["Cache-Control"] = (
+            "no-store, no-cache, must-revalidate, max-age=0"
+        )
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+
+    return response
 
 
 # --------------------------------------------------
@@ -117,10 +142,12 @@ def get_visitor_stats(logs):
 def dashboard():
     can_view_visitors = current_user.role in ("admin", "security")
     can_view_approvals = current_user.role in ("admin", "host")
+    host_user_id = current_user.id if current_user.role == "host" else None
 
     logs = get_visitor_logs() if can_view_visitors else []
     pending_approvals = (
-        len(get_pending_approvals()) if can_view_approvals else 0
+        len(get_pending_approvals(host_user_id=host_user_id))
+        if can_view_approvals else 0
     )
 
     return render_template(
@@ -154,7 +181,8 @@ def approvals_page():
 @app.route("/approval-history")
 @host_required
 def approval_history_page():
-    history = get_approval_history()
+    host_user_id = current_user.id if current_user.role == "host" else None
+    history = get_approval_history(host_user_id=host_user_id)
 
     return render_template(
         "approval_history.html",
@@ -198,6 +226,12 @@ def visitor_history_page():
     )
 
 
+@app.route("/users")
+@admin_required
+def users_page():
+    return render_template("users.html")
+
+
 @app.route("/health")
 def health_check():
     return jsonify({
@@ -238,13 +272,80 @@ def registrations_api():
 @app.route("/api/pending-approvals")
 @host_required
 def pending_approvals_api():
-    return jsonify(get_pending_approvals())
+    host_user_id = current_user.id if current_user.role == "host" else None
+    return jsonify(get_pending_approvals(host_user_id=host_user_id))
 
 
 @app.route("/api/approval-history")
 @host_required
 def approval_history_api():
-    return jsonify(get_approval_history())
+    host_user_id = current_user.id if current_user.role == "host" else None
+    return jsonify(get_approval_history(host_user_id=host_user_id))
+
+
+# --------------------------------------------------
+# USER MANAGEMENT (ADMIN ONLY)
+# --------------------------------------------------
+
+
+@app.route("/api/users", methods=["GET", "POST"])
+@admin_required
+def users_api():
+    if request.method == "GET":
+        return jsonify({"users": list_users()})
+
+    data = request.get_json(silent=True) or request.form
+
+    success, message, user = create_user_account(
+        data.get("username", ""),
+        data.get("full_name", ""),
+        data.get("email", ""),
+        data.get("role", ""),
+        data.get("department", ""),
+        data.get("password", ""),
+    )
+
+    return jsonify({
+        "success": success,
+        "message": message,
+        "user": user,
+    }), 201 if success else 400
+
+
+@app.route("/api/users/<int:user_id>", methods=["PATCH"])
+@admin_required
+def user_api(user_id):
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return jsonify({
+            "success": False,
+            "message": "A JSON object is required.",
+            "user": None,
+        }), 400
+
+    changes = {}
+    for key in (
+        "full_name", "email", "role", "department", "password", "is_active"
+    ):
+        if key in data:
+            changes[key] = data[key]
+
+    success, message, user = update_user_account(
+        user_id,
+        changes,
+        acting_user_id=current_user.id,
+    )
+
+    status_code = 200
+    if not success:
+        status_code = 404 if message == "User not found." else 400
+
+    return jsonify({
+        "success": success,
+        "message": message,
+        "user": user,
+    }), status_code
 
 
 # --------------------------------------------------
@@ -340,6 +441,15 @@ def serve_visitor_capture(filename):
             "success": False,
             "message": "Unsupported visitor photo file type."
         }), 400
+
+    if (
+        current_user.role == "host"
+        and not host_owns_capture(safe_filename, current_user.id)
+    ):
+        return jsonify({
+            "success": False,
+            "message": "You do not have permission to view this visitor photo."
+        }), 403
 
     if not os.path.isfile(os.path.join(CAPTURE_DIR, safe_filename)):
         return jsonify({
@@ -443,15 +553,21 @@ def process_host_approval(registration_id, decision):
 
     try:
         data = request.get_json(silent=True) or {}
+        rejection_reason = str(
+            data.get("rejection_reason") or ""
+        ).strip()
 
-        decided_by = data.get("decided_by", "").strip()
-        rejection_reason = data.get("rejection_reason", "").strip()
+        decided_by = (
+            current_user.full_name or current_user.username or ""
+        ).strip()
+        host_user_id = current_user.id if current_user.role == "host" else None
 
-        success, message, visitor = update_approval(
+        success, message, visitor, status_code = update_approval(
             registration_id,
             decision,
             decided_by,
-            rejection_reason
+            rejection_reason,
+            host_user_id=host_user_id,
         )
 
         email_sent = False
@@ -466,7 +582,7 @@ def process_host_approval(registration_id, decision):
             "success": success,
             "message": message,
             "email_sent": email_sent
-        }), 200 if success else 400
+        }), status_code
 
     except Exception:
         app.logger.exception("Host approval failed")
