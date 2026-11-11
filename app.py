@@ -14,8 +14,11 @@ from flask import (
     render_template,
     request,
     jsonify,
-    Response
+    Response,
+    send_from_directory
 )
+
+from werkzeug.utils import secure_filename
 
 from visitor_logs import (
     mark_entry,
@@ -214,6 +217,47 @@ def save_capture():
 
 
 # --------------------------------------------------
+# VISITOR PHOTO FILES
+# --------------------------------------------------
+
+ALLOWED_PHOTO_EXTENSIONS = (".jpg", ".jpeg", ".png")
+
+
+@app.route("/visitor-captures/<filename>")
+def serve_visitor_capture(filename):
+    safe_filename = secure_filename(filename)
+
+    if not safe_filename or safe_filename != filename:
+        return jsonify({
+            "success": False,
+            "message": "Invalid visitor photo filename."
+        }), 400
+
+    if not safe_filename.lower().endswith(ALLOWED_PHOTO_EXTENSIONS):
+        return jsonify({
+            "success": False,
+            "message": "Unsupported visitor photo file type."
+        }), 400
+
+    if not os.path.isfile(os.path.join(CAPTURE_DIR, safe_filename)):
+        return jsonify({
+            "success": False,
+            "message": "Visitor photo not found."
+        }), 404
+
+    try:
+        return send_from_directory(CAPTURE_DIR, safe_filename)
+
+    except OSError:
+        app.logger.exception("Could not serve visitor photo")
+
+        return jsonify({
+            "success": False,
+            "message": "Could not load the visitor photo."
+        }), 500
+
+
+# --------------------------------------------------
 # VISITOR REGISTRATION
 # --------------------------------------------------
 
@@ -253,6 +297,7 @@ def register_new_visitor():
 # HOST APPROVAL
 # --------------------------------------------------
 
+
 @app.route(
     "/host-approval/<registration_id>/<decision>",
     methods=["POST"]
@@ -272,8 +317,16 @@ def process_host_approval(registration_id, decision):
         }), 400
 
     try:
+        data = request.get_json(silent=True) or {}
+
+        decided_by = data.get("decided_by", "").strip()
+        rejection_reason = data.get("rejection_reason", "").strip()
+
         success, message, visitor = update_approval(
-            registration_id, decision
+            registration_id,
+            decision,
+            decided_by,
+            rejection_reason
         )
 
         email_sent = False

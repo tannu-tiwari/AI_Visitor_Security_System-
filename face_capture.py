@@ -26,7 +26,7 @@ if not camera.isOpened():
     raise SystemExit
 
 count = 0
-target_images = 30
+target_images = 100
 
 while count < target_images:
     success, frame = camera.read()
@@ -45,6 +45,7 @@ while count < target_images:
     )
 
     if len(faces) > 0:
+        faces = sorted(faces, key=lambda face: face[2] * face[3], reverse=True)
         x, y, w, h = faces[0]
 
         cv2.rectangle(

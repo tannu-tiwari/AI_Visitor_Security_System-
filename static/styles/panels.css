@@ -1,0 +1,81 @@
+.panel {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    padding: 21px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+    min-width: 0;
+}
+
+.panel-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.panel-heading h3 {
+    font-size: 16px;
+}
+
+.panel-heading p {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.list-item {
+    border: 1px solid var(--border);
+    padding: 13px;
+    border-radius: 9px;
+    margin-bottom: 10px;
+}
+
+.list-item:last-child {
+    margin-bottom: 0;
+}
+
+.list-item h4 {
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.list-item p {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.list-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 11px;
+    flex-wrap: wrap;
+}
+
+.empty-state {
+    padding: 25px 10px;
+    color: var(--muted);
+    text-align: center;
+    font-size: 13px;
+}
+
+.notice {
+    padding: 12px;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+    margin-top: 14px;
+}
+
+@media (max-width: 600px) {
+    .panel {
+        padding: 15px;
+    }
+}

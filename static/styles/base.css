@@ -1,0 +1,39 @@
+:root {
+    --primary: #166534;
+    --primary-light: #dcfce7;
+    --bg: #f5f7fb;
+    --white: #ffffff;
+    --text: #172033;
+    --muted: #64748b;
+    --border: #e5e7eb;
+    --red: #dc2626;
+    --orange: #d97706;
+    --shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+.app {
+    min-height: 100vh;
+}

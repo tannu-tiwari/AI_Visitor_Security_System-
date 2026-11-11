@@ -8,7 +8,13 @@ MODEL_DIR = "model"
 
 os.makedirs(MODEL_DIR, exist_ok=True)
 
-recognizer = cv2.face.LBPHFaceRecognizer_create()
+recognizer = cv2.face.LBPHFaceRecognizer_create(
+    radius=1,
+    neighbors=8,
+    grid_x=8,
+    grid_y=8,
+    threshold=80
+)
 
 faces = []
 labels = []

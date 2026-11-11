@@ -1,0 +1,31 @@
+.button {
+    border: none;
+    border-radius: 8px;
+    padding: 10px 15px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.button-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.button-primary:hover {
+    background: #14532d;
+}
+
+.button-secondary {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.button-danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.small-button {
+    padding: 7px 10px;
+    font-size: 11px;
+}

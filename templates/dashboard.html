@@ -1,716 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Visitor Security System</title>
 
-    <style>
-        :root {
-            --primary: #166534;
-            --primary-light: #dcfce7;
-            --bg: #f5f7fb;
-            --white: #ffffff;
-            --text: #172033;
-            --muted: #64748b;
-            --border: #e5e7eb;
-            --red: #dc2626;
-            --orange: #d97706;
-            --shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-        }
-
-        button, input, select, textarea {
-            font: inherit;
-        }
-
-        button {
-            cursor: pointer;
-        }
-
-        .app {
-            min-height: 100vh;
-        }
-
-        .topbar {
-            background: var(--white);
-            border-bottom: 1px solid var(--border);
-            padding: 17px 28px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .brand-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            background: var(--primary);
-            color: white;
-            display: grid;
-            place-items: center;
-            font-size: 23px;
-        }
-
-        .brand h1 {
-            font-size: 20px;
-            margin-bottom: 4px;
-        }
-
-        .brand p {
-            color: var(--muted);
-            font-size: 12px;
-        }
-
-        .top-right {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            padding: 9px 12px;
-            background: #f1f5f9;
-            border-radius: 20px;
-            font-size: 12px;
-            color: var(--muted);
-        }
-
-        .status-dot {
-            height: 8px;
-            width: 8px;
-            border-radius: 50%;
-            background: #94a3b8;
-        }
-
-        .status-dot.online {
-            background: #16a34a;
-        }
-
-        .status-dot.offline {
-            background: #dc2626;
-        }
-
-        .container {
-            max-width: 1500px;
-            margin: auto;
-            padding: 26px;
-        }
-
-        .page-heading {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 24px;
-        }
-
-        .page-heading h2 {
-            font-size: 25px;
-            margin-bottom: 7px;
-        }
-
-        .page-heading p {
-            color: var(--muted);
-            font-size: 14px;
-        }
-
-        .button {
-            border: none;
-            border-radius: 8px;
-            padding: 10px 15px;
-            font-weight: 600;
-            font-size: 13px;
-        }
-
-        .button-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .button-primary:hover {
-            background: #14532d;
-        }
-
-        .button-secondary {
-            background: #f1f5f9;
-            color: #334155;
-        }
-
-        .button-danger {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 17px;
-            margin-bottom: 25px;
-        }
-
-        .stat-card {
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: 13px;
-            padding: 21px;
-            box-shadow: var(--shadow);
-        }
-
-        .stat-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 18px;
-        }
-
-        .stat-label {
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        .stat-icon {
-            width: 39px;
-            height: 39px;
-            border-radius: 10px;
-            display: grid;
-            place-items: center;
-            font-size: 20px;
-        }
-
-        .icon-green {
-            background: #dcfce7;
-        }
-
-        .icon-blue {
-            background: #dbeafe;
-        }
-
-        .icon-red {
-            background: #fee2e2;
-        }
-
-        .icon-orange {
-            background: #fef3c7;
-        }
-
-        .stat-value {
-            font-size: 30px;
-            font-weight: 700;
-        }
-
-        .stat-note {
-            font-size: 12px;
-            color: var(--muted);
-            margin-top: 7px;
-        }
-
-        .main-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
-            gap: 20px;
-            align-items: start;
-        }
-
-        .panel {
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: 13px;
-            padding: 21px;
-            box-shadow: var(--shadow);
-            margin-bottom: 20px;
-            min-width: 0;
-        }
-
-        .panel-heading {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-bottom: 18px;
-        }
-
-        .panel-heading h3 {
-            font-size: 16px;
-        }
-
-        .panel-heading p {
-            color: var(--muted);
-            font-size: 12px;
-            margin-top: 5px;
-        }
-
-        .camera-preview {
-            min-height: 235px;
-            background: #111827;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #cbd5e1;
-            text-align: center;
-            padding: 25px;
-        }
-
-        .camera-symbol {
-            font-size: 42px;
-            margin-bottom: 12px;
-        }
-
-        .camera-preview p {
-            font-size: 13px;
-            line-height: 1.7;
-        }
-
-        .camera-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 15px;
-        }
-
-        .notice {
-            padding: 12px;
-            background: #f8fafc;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--muted);
-            font-size: 12px;
-            line-height: 1.6;
-            margin-top: 14px;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 7px;
-        }
-
-        .form-group.full {
-            grid-column: 1 / -1;
-        }
-
-        .form-group label {
-            font-size: 12px;
-            font-weight: 600;
-            color: #475569;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 11px;
-            border: 1px solid #dbe1ea;
-            border-radius: 8px;
-            outline: none;
-            background: white;
-            color: var(--text);
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            border-color: var(--primary);
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 75px;
-        }
-
-        .form-submit {
-            margin-top: 16px;
-            width: 100%;
-        }
-
-        .feedback {
-            display: none;
-            padding: 11px;
-            border-radius: 8px;
-            margin-top: 13px;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .feedback.success {
-            display: block;
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .feedback.error {
-            display: block;
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .table-panel {
-            margin-top: 1px;
-        }
-
-        .table-toolbar {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .search-input {
-            max-width: 240px;
-            min-width: 160px;
-            padding: 9px 11px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            outline: none;
-        }
-
-        .table-wrap {
-            overflow-x: auto;
-            width: 100%;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 12px;
-            white-space: nowrap;
-        }
-
-        th {
-            background: #f8fafc;
-            color: #64748b;
-            font-weight: 600;
-        }
-
-        th, td {
-            padding: 13px 12px;
-            border-bottom: 1px solid #edf0f5;
-        }
-
-        td {
-            color: #334155;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 5px 9px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .badge-green {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .badge-red {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .badge-orange {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .badge-gray {
-            background: #f1f5f9;
-            color: #475569;
-        }
-
-        .empty-state {
-            padding: 25px 10px;
-            color: var(--muted);
-            text-align: center;
-            font-size: 13px;
-        }
-
-        .list-item {
-            border: 1px solid var(--border);
-            padding: 13px;
-            border-radius: 9px;
-            margin-bottom: 10px;
-        }
-
-        .list-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .list-item h4 {
-            font-size: 13px;
-            margin-bottom: 6px;
-        }
-
-        .list-item p {
-            color: var(--muted);
-            font-size: 12px;
-            line-height: 1.7;
-        }
-
-        .list-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 11px;
-            flex-wrap: wrap;
-        }
-
-        .small-button {
-            padding: 7px 10px;
-            font-size: 11px;
-        }
-
-        .footer {
-            text-align: center;
-            padding: 22px;
-            color: var(--muted);
-            font-size: 12px;
-        }
-
-        @media (max-width: 1050px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .main-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 600px) {
-            .topbar {
-                padding: 15px;
-            }
-
-            .container {
-                padding: 16px 12px;
-            }
-
-            .brand h1 {
-                font-size: 16px;
-            }
-
-            .page-heading h2 {
-                font-size: 21px;
-            }
-
-            .stats-grid {
-                gap: 10px;
-            }
-
-            .stat-card {
-                padding: 14px;
-            }
-
-            .stat-value {
-                font-size: 25px;
-            }
-
-            .stat-label {
-                font-size: 12px;
-            }
-
-            .panel {
-                padding: 15px;
-            }
-
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .form-group.full {
-                grid-column: auto;
-            }
-
-            .search-input {
-                max-width: 100%;
-                width: 100%;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/topbar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/buttons.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/badges.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/stats.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/panels.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/forms.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/camera.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/tables.css') }}">
 </head>
 
 <body>
-<div class="app">
+    <div class="app">
 
-    <header class="topbar">
-        <div class="brand">
-            <div class="brand-icon">🛡</div>
-            <div>
-                <h1>AI Visitor Security</h1>
-                <p>Smart College Visitor Management System</p>
-            </div>
-        </div>
-
-        <div class="top-right">
-            <div class="status-pill">
-                <span class="status-dot" id="cameraDot"></span>
-                <span id="cameraStatus">Checking camera...</span>
-            </div>
-            <div class="status-pill">
-                <span class="status-dot online"></span>
-                Dashboard Active
-            </div>
-        </div>
-    </header>
-
-    <main class="container">
-
-        <section class="page-heading">
-            <div>
-                <h2>Security Dashboard</h2>
-                <p>Monitor visitors, registrations and security activity.</p>
-            </div>
-            <button class="button button-secondary" id="refreshButton">
-                ↻ Refresh Dashboard
-            </button>
-        </section>
-
-        <section class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-top">
-                    <span class="stat-label">Total Visitor Records</span>
-                    <div class="stat-icon icon-blue">👥</div>
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-icon">🛡</div>
+                <div>
+                    <h1>AI Visitor Security</h1>
+                    <p>Smart College Visitor Management System</p>
                 </div>
-                <div class="stat-value" id="totalVisitors">
-                    {{ total_visitors|default(0) }}
-                </div>
-                <div class="stat-note">Recorded face-recognition events</div>
             </div>
 
-            <div class="stat-card">
-                <div class="stat-top">
-                    <span class="stat-label">Recognized Events</span>
-                    <div class="stat-icon icon-green">✓</div>
+            <div class="top-right">
+                <div class="status-pill">
+                    <span class="status-dot" id="cameraDot"></span>
+                    <span id="cameraStatus">Checking camera...</span>
                 </div>
-                <div class="stat-value" id="recognizedVisitors">
-                    {{ recognized|default(0) }}
+                <div class="status-pill">
+                    <span class="status-dot online"></span>
+                    Dashboard Active
                 </div>
-                <div class="stat-note">Known faces detected</div>
             </div>
+        </header>
 
-            <div class="stat-card">
-                <div class="stat-top">
-                    <span class="stat-label">Unknown Events</span>
-                    <div class="stat-icon icon-red">⚠</div>
+        <main class="container">
+
+            <section class="page-heading">
+                <div>
+                    <h2>Security Dashboard</h2>
+                    <p>Monitor visitors, registrations and security activity.</p>
                 </div>
-                <div class="stat-value" id="unknownVisitors">
-                    {{ unknown|default(0) }}
-                </div>
-                <div class="stat-note">Unrecognized face events</div>
-            </div>
+                <button class="button button-secondary" id="refreshButton">
+                    ↻ Refresh Dashboard
+                </button>
+            </section>
 
-            <div class="stat-card">
-                <div class="stat-top">
-                    <span class="stat-label">Currently Inside</span>
-                    <div class="stat-icon icon-orange">🏢</div>
-                </div>
-                <div class="stat-value" id="insideVisitors">0</div>
-                <div class="stat-note">Open entry records</div>
-            </div>
-        </section>
-
-        <section class="main-grid">
-
-            <div class="left-column">
-
-                <section class="panel">
-                    <div class="panel-heading">
-                        <div>
-                            <h3>Camera Status</h3>
-                            <p>Camera availability on the server computer</p>
-                        </div>
-                        <span class="badge badge-gray" id="cameraBadge">Checking</span>
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-label">Total Visitor Records</span>
+                        <div class="stat-icon icon-blue">👥</div>
                     </div>
+                    <div class="stat-value" id="totalVisitors">
+                        {{ total_visitors|default(0) }}
+                    </div>
+                    <div class="stat-note">Recorded face-recognition events</div>
+                </div>
 
-                    <div class="camera-preview" style="padding: 0; overflow: hidden; position: relative; min-height: 235px; background: #111827;">
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-label">Recognized Events</span>
+                        <div class="stat-icon icon-green">✓</div>
+                    </div>
+                    <div class="stat-value" id="recognizedVisitors">
+                        {{ recognized|default(0) }}
+                    </div>
+                    <div class="stat-note">Known faces detected</div>
+                </div>
 
-    <img
-        id="liveCameraFeed"
-        src="/video_feed"
-        alt="Live face recognition camera feed"
-        style="display: block; width: 100%; height: auto; min-height: 235px; object-fit: contain;"
-        onerror="this.style.display='none'; document.getElementById('cameraFeedError').style.display='block';"
-    >
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-label">Unknown Events</span>
+                        <div class="stat-icon icon-red">⚠</div>
+                    </div>
+                    <div class="stat-value" id="unknownVisitors">
+                        {{ unknown|default(0) }}
+                    </div>
+                    <div class="stat-note">Unrecognized face events</div>
+                </div>
 
-    <div
-        id="cameraFeedError"
-        style="display: none; padding: 30px; text-align: center; color: #cbd5e1;"
-    >
-        <div style="font-size: 40px; margin-bottom: 12px;">📷</div>
-        <p>Live camera feed could not be loaded.</p>
-        <p style="margin-top: 8px; font-size: 12px;">
-            Check that the Flask server is running and the camera is available.
-        </p>
-        <button
-            class="button button-primary"
-            style="margin-top: 15px;"
-            onclick="retryCameraFeed()"
-        >
-            Retry Camera
-        </button>
-    </div>
-</div>
+                <div class="stat-card">
+                    <div class="stat-top">
+                        <span class="stat-label">Currently Inside</span>
+                        <div class="stat-icon icon-orange">🏢</div>
+                    </div>
+                    <div class="stat-value" id="insideVisitors">0</div>
+                    <div class="stat-note">Open entry records</div>
+                </div>
+            </section>
 
-    <div id="capturePanel" style="display:none; margin-top:15px; padding:14px; border:1px solid var(--border); border-radius:10px;">
-    <h4 style="margin-bottom:10px;">Captured Visitor Photo</h4>
-    <img id="capturedPhotoPreview" alt="Captured visitor photo"
-         style="display:none; width:100%; max-width:360px; border-radius:8px; margin-bottom:12px;">
-    <p id="captureStatus" style="font-size:13px; color:var(--muted); margin-bottom:10px;"></p>
-    <button class="button button-secondary" id="retakePhotoButton" type="button">Retake Photo</button>
-</div>
-<canvas id="captureCanvas" style="display:none;"></canvas>
+            <section class="main-grid">
 
-<div class="camera-actions">
-    <button class="button button-primary" id="captureVisitorButton" type="button">
-        Capture Visitor
-    </button>
-        <button class="button button-primary" id="checkCameraButton">
-            Check Camera
-        </button>
-        <button class="button button-secondary" onclick="retryCameraFeed()">
-            Restart Video Feed
-        </button>
-    </div>
+                <div class="left-column">
 
-    <div class="notice">
-        Live camera feed with face recognition is connected through Flask.
-        Green boxes indicate recognized faces and red boxes indicate unknown faces.
-    </div>
+                    <section class="panel">
+                        <div class="panel-heading">
+                            <div>
+                                <h3>Camera Status</h3>
+                                <p>Camera availability on the server computer</p>
+                            </div>
+                            <span class="badge badge-gray" id="cameraBadge">Checking</span>
+                        </div>
+
+                        <div class="camera-preview"
+                            style="padding: 0; overflow: hidden; position: relative; min-height: 235px; background: #111827;">
+
+                            <img id="liveCameraFeed" src="/video_feed" alt="Live face recognition camera feed"
+                                style="display: block; width: 100%; height: auto; min-height: 235px; object-fit: contain;"
+                                onerror="this.style.display='none'; document.getElementById('cameraFeedError').style.display='block';">
+
+                            <div id="cameraFeedError"
+                                style="display: none; padding: 30px; text-align: center; color: #cbd5e1;">
+                                <div style="font-size: 40px; margin-bottom: 12px;">📷</div>
+                                <p>Live camera feed could not be loaded.</p>
+                                <p style="margin-top: 8px; font-size: 12px;">
+                                    Check that the Flask server is running and the camera is available.
+                                </p>
+                                <button class="button button-primary" style="margin-top: 15px;"
+                                    id="retryCameraButton">
+                                    Retry Camera
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="capturePanel"
+                            style="display:none; margin-top:15px; padding:14px; border:1px solid var(--border); border-radius:10px;">
+                            <h4 style="margin-bottom:10px;">Captured Visitor Photo</h4>
+                            <img id="capturedPhotoPreview" alt="Captured visitor photo"
+                                style="display:none; width:100%; max-width:360px; border-radius:8px; margin-bottom:12px;">
+                            <p id="captureStatus" style="font-size:13px; color:var(--muted); margin-bottom:10px;"></p>
+                            <button class="button button-secondary" id="retakePhotoButton" type="button">Retake
+                                Photo</button>
+                        </div>
+                        <canvas id="captureCanvas" style="display:none;"></canvas>
+
+                        <div class="camera-actions">
+                            <button class="button button-primary" id="captureVisitorButton" type="button">
+                                Capture Visitor
+                            </button>
+                            <button class="button button-primary" id="checkCameraButton">
+                                Check Camera
+                            </button>
+                            <button class="button button-secondary" id="restartFeedButton">
+                                Restart Video Feed
+                            </button>
+                        </div>
+
+                        <div class="notice">
+                            Live camera feed with face recognition is connected through Flask.
+                            Green boxes indicate recognized faces and red boxes indicate unknown faces.
+                        </div>
                     </section>
 
                     <section class="panel">
@@ -722,152 +170,146 @@
                             <span class="badge badge-orange">Approval Required</span>
                         </div>
 
-                    <form id="registrationForm" style="display:none;">
-                        <div class="form-grid">
+                        <form id="registrationForm" style="display:none;">
+                            <div class="form-grid">
 
-                            <div class="form-group">
-                                <label for="visitorName">Visitor Name *</label>
-                                <input id="visitorName" name="name"
-                                       type="text" required
-                                       placeholder="Enter full name">
+                                <div class="form-group">
+                                    <label for="visitorName">Visitor Name *</label>
+                                    <input id="visitorName" name="name" type="text" required
+                                        placeholder="Enter full name">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="visitorPhone">Phone Number *</label>
+                                    <input id="visitorPhone" name="phone" type="tel" required pattern="[0-9]{10}"
+                                        maxlength="10" placeholder="10-digit mobile number">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="visitorEmail">Email</label>
+                                    <input id="visitorEmail" name="email" type="email"
+                                        placeholder="visitor@example.com">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="visitorDepartment">Department *</label>
+                                    <select id="visitorDepartment" name="department" required>
+                                        <option value="">Select department</option>
+                                        <option>Computer Science</option>
+                                        <option>Information Technology</option>
+                                        <option>Electronics</option>
+                                        <option>Mechanical</option>
+                                        <option>Civil</option>
+                                        <option>Administration</option>
+                                        <option>Admissions</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="visitorPurpose">Purpose of Visit *</label>
+                                    <select id="visitorPurpose" name="purpose" required>
+                                        <option value="">Select purpose</option>
+                                        <option>Admission Inquiry</option>
+                                        <option>Meeting with Faculty</option>
+                                        <option>Official Meeting</option>
+                                        <option>Parent Visit</option>
+                                        <option>Delivery</option>
+                                        <option>Maintenance</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="visitorHost">Host / Person to Meet *</label>
+                                    <input id="visitorHost" name="host" type="text" required
+                                        placeholder="Faculty or staff name">
+                                </div>
+
                             </div>
 
-                            <div class="form-group">
-                                <label for="visitorPhone">Phone Number *</label>
-                                <input id="visitorPhone" name="phone"
-                                       type="tel" required
-                                       pattern="[0-9]{10}" maxlength="10"
-                                       placeholder="10-digit mobile number">
-                            </div>
+                            <input type="hidden" id="captureFilename" name="capture_filename">
+                            <button class="button button-primary form-submit" type="submit">
+                                Save Registration
+                            </button>
 
-                            <div class="form-group">
-                                <label for="visitorEmail">Email</label>
-                                <input id="visitorEmail" name="email"
-                                       type="email"
-                                       placeholder="visitor@example.com">
-                            </div>
+                            <div class="feedback" id="registrationFeedback" role="status"></div>
+                        </form>
+                    </section>
 
-                            <div class="form-group">
-                                <label for="visitorDepartment">Department *</label>
-                                <select id="visitorDepartment" name="department" required>
-                                    <option value="">Select department</option>
-                                    <option>Computer Science</option>
-                                    <option>Information Technology</option>
-                                    <option>Electronics</option>
-                                    <option>Mechanical</option>
-                                    <option>Civil</option>
-                                    <option>Administration</option>
-                                    <option>Admissions</option>
-                                    <option>Other</option>
-                                </select>
-                            </div>
+                </div>
 
-                            <div class="form-group">
-                                <label for="visitorPurpose">Purpose of Visit *</label>
-                                <select id="visitorPurpose" name="purpose" required>
-                                    <option value="">Select purpose</option>
-                                    <option>Admission Inquiry</option>
-                                    <option>Meeting with Faculty</option>
-                                    <option>Official Meeting</option>
-                                    <option>Parent Visit</option>
-                                    <option>Delivery</option>
-                                    <option>Maintenance</option>
-                                    <option>Other</option>
-                                </select>
-                            </div>
+                <div class="right-column">
 
-                            <div class="form-group">
-                                <label for="visitorHost">Host / Person to Meet *</label>
-                                <input id="visitorHost" name="host"
-                                       type="text" required
-                                       placeholder="Faculty or staff name">
+                    <section class="panel">
+                        <div class="panel-heading">
+                            <div>
+                                <h3>Currently Inside</h3>
+                                <p>Visitors with open entry records</p>
                             </div>
-
+                            <span class="badge badge-green" id="insideBadge">0 Visitors</span>
                         </div>
+                        <div id="insideList">
+                            <div class="empty-state">Loading visitor records...</div>
+                        </div>
+                    </section>
 
-                        <input type="hidden" id="captureFilename" name="capture_filename">
-                        <button class="button button-primary form-submit" type="submit">
-                            Save Registration
+                    <section class="panel">
+                        <div class="panel-heading">
+                            <div>
+                                <h3>Approved Visitors</h3>
+                                <p>Mark entry for visitors approved by the host</p>
+                            </div>
+                            <span class="badge badge-green" id="approvedBadge">0 Approved</span>
+                        </div>
+                        <div id="approvedList">
+                            <div class="empty-state">Loading approved visitors...</div>
+                        </div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-heading">
+                            <div>
+                                <h3>Pending Host Approvals</h3>
+                                <p>Review submitted registrations</p>
+                            </div>
+                            <span class="badge badge-orange" id="pendingBadge">Pending</span>
+                        </div>
+                        <div id="approvalList">
+                            <div class="empty-state">Loading approvals...</div>
+                        </div>
+                    </section>
+
+                </div>
+            </section>
+
+            <section class="panel table-panel">
+                <div class="panel-heading">
+                    <div>
+                        <h3>Visitor Recognition Logs</h3>
+                        <p>Recent events recorded by the face-recognition program</p>
+                    </div>
+
+                    <div class="table-toolbar">
+                        <input class="search-input" type="search" id="logSearch" placeholder="Search visitor...">
+                        <button class="button button-secondary" id="refreshLogsButton">
+                            Refresh Logs
                         </button>
-
-                        <div class="feedback" id="registrationFeedback" role="status"></div>
-                    </form>
-                </section>
-
-            </div>
-
-            <div class="right-column">
-
-                <section class="panel">
-                    <div class="panel-heading">
-                        <div>
-                            <h3>Currently Inside</h3>
-                            <p>Visitors with open entry records</p>
-                        </div>
-                        <span class="badge badge-green" id="insideBadge">0 Visitors</span>
                     </div>
-                    <div id="insideList">
-                        <div class="empty-state">Loading visitor records...</div>
-                    </div>
-                </section>
-
-                <section class="panel">
-                    <div class="panel-heading">
-                        <div>
-                            <h3>Approved Visitors</h3>
-                            <p>Mark entry for visitors approved by the host</p>
-                        </div>
-                        <span class="badge badge-green" id="approvedBadge">0 Approved</span>
-                    </div>
-                    <div id="approvedList">
-                        <div class="empty-state">Loading approved visitors...</div>
-                    </div>
-                </section>
-
-                <section class="panel">
-                    <div class="panel-heading">
-                        <div>
-                            <h3>Pending Host Approvals</h3>
-                            <p>Review submitted registrations</p>
-                        </div>
-                        <span class="badge badge-orange" id="pendingBadge">Pending</span>
-                    </div>
-                    <div id="approvalList">
-                        <div class="empty-state">Loading approvals...</div>
-                    </div>
-                </section>
-
-            </div>
-        </section>
-
-        <section class="panel table-panel">
-            <div class="panel-heading">
-                <div>
-                    <h3>Visitor Recognition Logs</h3>
-                    <p>Recent events recorded by the face-recognition program</p>
                 </div>
 
-                <div class="table-toolbar">
-                    <input class="search-input" type="search" id="logSearch"
-                           placeholder="Search visitor...">
-                    <button class="button button-secondary" id="refreshLogsButton">
-                        Refresh Logs
-                    </button>
-                </div>
-            </div>
-
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Visitor Name</th>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Recognition Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="logsTableBody">
-                        {% if logs %}
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Visitor Name</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Recognition Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody">
+                            {% if logs %}
                             {% for log in logs %}
                             <tr>
                                 <td>{{ log.get('Visitor Name', '') }}</td>
@@ -875,524 +317,37 @@
                                 <td>{{ log.get('Time', '') }}</td>
                                 <td>
                                     {% if log.get('Status', '') == 'Recognized' %}
-                                        <span class="badge badge-green">Recognized</span>
+                                    <span class="badge badge-green">Recognized</span>
                                     {% else %}
-                                        <span class="badge badge-red">Unknown</span>
+                                    <span class="badge badge-red">Unknown</span>
                                     {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
-                        {% else %}
+                            {% else %}
                             <tr>
                                 <td colspan="4" class="empty-state">No visitor logs available.</td>
                             </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="notice">
-                These are recognition events, not a verified attendance register.
-                An entry or exit should be recorded through the appropriate security workflow.
-            </div>
-        </section>
-
-    </main>
-
-    <footer class="footer">
-        AI Visitor Security System · Smart College Visitor Management
-    </footer>
-</div>
-
-<script>
-    const $ = (id) => document.getElementById(id);
-    function retryCameraFeed() {
-    const feed = document.getElementById("liveCameraFeed");
-    const error = document.getElementById("cameraFeedError");
-
-    error.style.display = "none";
-    feed.style.display = "block";
-
-    // Reconnect to the Flask video stream.
-    feed.src = "/video_feed?t=" + Date.now();
-}
-
-    let capturedFilename = "";
-
-    async function captureVisitorPhoto() {
-        const feed = $("liveCameraFeed");
-        const button = $("captureVisitorButton");
-        if (!feed || !feed.complete || !feed.naturalWidth || !feed.naturalHeight) {
-            alert("Camera feed is not ready. Please wait and try again.");
-            return;
-        }
-
-        button.disabled = true;
-        button.textContent = "Capturing...";
-
-        try {
-            const canvas = $("captureCanvas");
-            canvas.width = feed.naturalWidth;
-            canvas.height = feed.naturalHeight;
-            canvas.getContext("2d").drawImage(feed, 0, 0);
-
-            const imageData = canvas.toDataURL("image/jpeg", 0.9);
-            const result = await fetchJSON("/save-capture", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ image: imageData })
-            });
-
-            if (!result.success || !result.filename) {
-                throw new Error(result.message || "Image could not be saved.");
-            }
-
-            capturedFilename = result.filename;
-            $("captureFilename").value = capturedFilename;
-            $("capturedPhotoPreview").src = imageData;
-            $("capturedPhotoPreview").style.display = "block";
-            $("capturePanel").style.display = "block";
-            $("captureStatus").textContent = "Photo saved: " + capturedFilename;
-            $("registrationForm").style.display = "block";
-            $("registrationForm").scrollIntoView({ behavior: "smooth", block: "start" });
-            if (!$("visitorName").value.trim()) $("visitorName").focus();
-        } catch (error) {
-            console.error("Capture failed:", error);
-            alert("Photo capture failed: " + error.message);
-        } finally {
-            button.disabled = false;
-            button.textContent = "Capture Visitor";
-        }
-    }
-
-    function retakeVisitorPhoto() {
-        capturedFilename = "";
-        $("captureFilename").value = "";
-        $("capturedPhotoPreview").removeAttribute("src");
-        $("capturedPhotoPreview").style.display = "none";
-        $("capturePanel").style.display = "none";
-        $("registrationForm").style.display = "none";
-        $("captureStatus").textContent = "";
-    }
-
-    let allLogs = [];
-
-    async function fetchJSON(url, options = {}) {
-        const response = await fetch(url, options);
-        if (!response.ok) {
-            throw new Error("Request failed: " + response.status);
-        }
-        return response.json();
-    }
-
-    function showFeedback(element, message, success) {
-        element.textContent = message;
-        element.className = "feedback " + (success ? "success" : "error");
-    }
-
-    function escapeHTML(value) {
-        return String(value ?? "").replace(/[&<>"']/g, character => ({
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;"
-        })[character]);
-    }
-
-    async function checkCamera() {
-        $("cameraStatus").textContent = "Checking camera...";
-        $("cameraDot").className = "status-dot";
-        $("cameraBadge").className = "badge badge-gray";
-        $("cameraBadge").textContent = "Checking";
-
-        try {
-            const data = await fetchJSON("/camera-status");
-
-            if (data.camera_available) {
-                $("cameraStatus").textContent = "Camera Available";
-                $("cameraDot").className = "status-dot online";
-                $("cameraBadge").className = "badge badge-green";
-                $("cameraBadge").textContent = "Available";
-            } else {
-                $("cameraStatus").textContent = "Camera Unavailable";
-                $("cameraDot").className = "status-dot offline";
-                $("cameraBadge").className = "badge badge-red";
-                $("cameraBadge").textContent = "Unavailable";
-            }
-
-            $("cameraMessage").textContent = data.message;
-        } catch (error) {
-            $("cameraStatus").textContent = "Status Unavailable";
-            $("cameraDot").className = "status-dot offline";
-            $("cameraBadge").className = "badge badge-red";
-            $("cameraBadge").textContent = "Error";
-            $("cameraMessage").textContent =
-                "Could not contact the Flask server. Check that app.py is running.";
-        }
-    }
-
-    function renderLogs(logs) {
-        const query = $("logSearch").value.trim().toLowerCase();
-
-        const filtered = logs.filter(log =>
-            Object.values(log).some(value =>
-                String(value ?? "").toLowerCase().includes(query)
-            )
-        );
-
-        if (!filtered.length) {
-            $("logsTableBody").innerHTML =
-                '<tr><td colspan="4" class="empty-state">No matching visitor logs.</td></tr>';
-            return;
-        }
-
-        $("logsTableBody").innerHTML = filtered.map(log => {
-            const status = String(log.Status ?? "");
-            const recognized = status.toLowerCase() === "recognized";
-
-            return `
-                <tr>
-                    <td>${escapeHTML(log["Visitor Name"])}</td>
-                    <td>${escapeHTML(log.Date)}</td>
-                    <td>${escapeHTML(log.Time)}</td>
-                    <td>
-                        <span class="badge ${recognized ? "badge-green" : "badge-red"}">
-                            ${escapeHTML(status || "Unknown")}
-                        </span>
-                    </td>
-                </tr>
-            `;
-        }).join("");
-    }
-
-    async function loadLogs() {
-        try {
-            const data = await fetchJSON("/api/visitor-logs");
-
-            if (Array.isArray(data)) {
-                allLogs = data;
-            } else {
-                allLogs = data.logs || [];
-                if (data.total_visitors !== undefined) {
-                    $("totalVisitors").textContent = data.total_visitors;
-                }
-                if (data.recognized !== undefined) {
-                    $("recognizedVisitors").textContent = data.recognized;
-                }
-                if (data.unknown !== undefined) {
-                    $("unknownVisitors").textContent = data.unknown;
-                }
-            }
-
-            renderLogs(allLogs);
-        } catch (error) {
-            console.error("Could not load visitor logs:", error);
-        }
-    }
-
-    async function loadInsideVisitors() {
-        try {
-            const data = await fetchJSON("/api/open-visitors");
-            const visitors = Array.isArray(data)
-                ? data
-                : (data.visitors || data.open_visitors || []);
-
-            $("insideVisitors").textContent = visitors.length;
-            $("insideBadge").textContent = visitors.length + " Visitors";
-
-            if (!visitors.length) {
-                $("insideList").innerHTML =
-                    '<div class="empty-state">No open entry records.</div>';
-                return;
-            }
-
-            $("insideList").innerHTML = visitors.map(visitor => {
-                const name = visitor.Name || visitor.name ||
-                    visitor["Visitor Name"] || "Unknown";
-                const time = visitor["Entry Time"] ||
-                    visitor.entry_time || visitor.time || "";
-
-                return `
-                    <div class="list-item">
-                        <h4>${escapeHTML(name)}</h4>
-                        <p>Entry time: ${escapeHTML(time || "Not available")}</p>
-                        <div class="list-actions">
-                            <button class="button button-danger small-button"
-                                data-exit-name="${escapeHTML(name)}">
-                                Mark Exit
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join("");
-        } catch (error) {
-            $("insideList").innerHTML =
-                '<div class="empty-state">Could not load open visitor records.</div>';
-        }
-    }
-
-    async function loadApprovedVisitors() {
-        try {
-            const data = await fetchJSON("/api/registrations");
-            const registrations = Array.isArray(data)
-                ? data
-                : (data.registrations || data.visitors || []);
-            const approved = registrations.filter(visitor =>
-                String(visitor["Approval Status"] || visitor.approval_status || "")
-                    .toLowerCase() === "approved"
-            );
-
-            $("approvedBadge").textContent = approved.length + " Approved";
-
-            if (!approved.length) {
-                $("approvedList").innerHTML =
-                    '<div class="empty-state">No approved visitors waiting for entry.</div>';
-                return;
-            }
-
-            $("approvedList").innerHTML = approved.map(visitor => {
-                const name = visitor.Name || visitor.name || "Visitor";
-                const id = visitor["Registration ID"] || visitor.registration_id || visitor.id || "";
-                const purpose = visitor.Purpose || visitor.purpose || "";
-                const host = visitor.Host || visitor.host || "";
-
-                return `
-                    <div class="list-item">
-                        <h4>${escapeHTML(name)}</h4>
-                        <p>Purpose: ${escapeHTML(purpose)}<br>
-                           Host: ${escapeHTML(host)}<br>
-                           Status: <span class="badge badge-green">Approved</span></p>
-                        <div class="list-actions">
-                            <button class="button button-primary small-button"
-                                data-entry-name="${escapeHTML(name)}"
-                                data-entry-id="${escapeHTML(id)}">
-                                Mark Entry
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join("");
-        } catch (error) {
-            console.error("Could not load approved visitors:", error);
-            $("approvedList").innerHTML =
-                '<div class="empty-state">Could not load approved visitors.</div>';
-        }
-    }
-
-    async function loadApprovals() {
-        try {
-            const data = await fetchJSON("/api/pending-approvals");
-            const approvals = Array.isArray(data)
-                ? data
-                : (data.approvals || data.pending || []);
-
-            $("pendingBadge").textContent = approvals.length + " Pending";
-
-            if (!approvals.length) {
-                $("approvalList").innerHTML =
-                    '<div class="empty-state">No pending approvals.</div>';
-                return;
-            }
-
-            $("approvalList").innerHTML = approvals.map(visitor => {
-                const name = visitor.Name || visitor.name || "Visitor";
-                const purpose = visitor.Purpose || visitor.purpose || "";
-                const host = visitor.Host || visitor.host || "";
-                const department = visitor.Department || visitor.department || "";
-                const id = visitor["Registration ID"] ||
-                    visitor.registration_id || visitor.id || "";
-
-                return `
-                    <div class="list-item">
-                        <h4>${escapeHTML(name)}</h4>
-                        <p>
-                            Purpose: ${escapeHTML(purpose)}<br>
-                            Host: ${escapeHTML(host)}<br>
-                            Department: ${escapeHTML(department)}
-                        </p>
-                        <div class="list-actions">
-                            <button class="button button-primary small-button"
-                                data-approval-id="${escapeHTML(id)}"
-                                data-decision="approved">
-                                Approve
-                            </button>
-                            <button class="button button-danger small-button"
-                                data-approval-id="${escapeHTML(id)}"
-                                data-decision="rejected">
-                                Reject
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join("");
-        } catch (error) {
-            $("approvalList").innerHTML =
-                '<div class="empty-state">Could not load host approvals.</div>';
-        }
-    }
-
-    async function refreshDashboard() {
-        await Promise.all([
-            loadLogs(),
-            loadInsideVisitors(),
-            loadApprovals(),
-            loadApprovedVisitors(),
-            checkCamera()
-        ]);
-    }
-
-    $("registrationForm").addEventListener("submit", async event => {
-        event.preventDefault();
-
-        const form = event.currentTarget;
-        const feedback = $("registrationFeedback");
-        const submitButton = form.querySelector('button[type="submit"]');
-        const formData = new FormData(form);
-        const payload = Object.fromEntries(formData.entries());
-
-        if (!payload.capture_filename) {
-            showFeedback(feedback, "Please capture a visitor photo first.", false);
-            return;
-        }
-
-        submitButton.disabled = true;
-        submitButton.textContent = "Submitting...";
-
-        try {
-            const response = await fetchJSON("/register-visitor", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-
-            const success = response.success === true ||
-                response.status === "success";
-
-            showFeedback(
-                feedback,
-                response.message || (success
-                    ? "Registration submitted."
-                    : "Registration could not be completed."),
-                success
-            );
-
-            if (success) {
-                form.reset();
-                retakeVisitorPhoto();
-                await loadApprovals();
-            }
-        } catch (error) {
-            showFeedback(
-                feedback,
-                "Registration failed. The backend route may expect form data instead of JSON, or the server may be unavailable.",
-                false
-            );
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = "Submit Registration";
-        }
-    });
-
-    $("approvedList").addEventListener("click", async event => {
-        const button = event.target.closest("[data-entry-name]");
-        if (!button) return;
-
-        const name = button.dataset.entryName;
-        if (!confirm("Mark " + name + " as entered?")) return;
-
-        button.disabled = true;
-        try {
-            const response = await fetchJSON("/mark-entry", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name })
-            });
-            alert(response.message || "Entry request sent.");
-            await Promise.all([loadInsideVisitors(), loadApprovedVisitors()]);
-        } catch (error) {
-            alert("Entry could not be recorded. Please check the Flask backend.");
-        } finally {
-            button.disabled = false;
-        }
-    });
-
-    $("insideList").addEventListener("click", async event => {
-        const button = event.target.closest("[data-exit-name]");
-        if (!button) return;
-
-        const name = button.dataset.exitName;
-        if (!confirm("Mark " + name + " as exited?")) return;
-
-        try {
-            const response = await fetchJSON("/mark-exit", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name })
-            });
-
-            alert(response.message || "Exit request sent.");
-            await loadInsideVisitors();
-        } catch (error) {
-            alert("Exit could not be recorded. Please check the Flask backend.");
-        }
-    });
-
-    $("approvalList").addEventListener("click", async event => {
-        const button = event.target.closest("[data-approval-id]");
-        if (!button) return;
-
-        const id = button.dataset.approvalId;
-        const decision = button.dataset.decision;
-
-        if (!id) {
-            alert("Registration ID is missing. Cannot update approval.");
-            return;
-        }
-
-        try {
-            const response = await fetchJSON(
-                "/host-approval/" + encodeURIComponent(id) + "/" +
-                encodeURIComponent(decision),
-                { method: "POST" }
-            );
-
-            let message = response.message ||
-                (decision === "approved"
-                    ? "Visitor request approved."
-                    : "Visitor request rejected.");
-
-            if (response.success) {
-                message += response.email_sent
-                    ? " Email sent to the visitor."
-                    : " Email could not be sent.";
-            }
-
-            alert(message);
-            await loadApprovals();
-        } catch (error) {
-            alert("Approval could not be updated. Check the backend route and decision values.");
-        }
-    });
-
-    $("logSearch").addEventListener("input", () => renderLogs(allLogs));
-    $("refreshButton").addEventListener("click", refreshDashboard);
-    $("refreshLogsButton").addEventListener("click", loadLogs);
-    $("checkCameraButton").addEventListener("click", checkCamera);
-    $("captureVisitorButton").addEventListener("click", captureVisitorPhoto);
-    $("retakePhotoButton").addEventListener("click", retakeVisitorPhoto);
-
-    refreshDashboard();
-
-    // Refresh dashboard data periodically.
-    // This does not start continuous face recognition.
-    setInterval(() => {
-        loadLogs();
-        loadInsideVisitors();
-        loadApprovals();
-        loadApprovedVisitors();
-    }, 10000);
-</script>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="notice">
+                    These are recognition events, not a verified attendance register.
+                    An entry or exit should be recorded through the appropriate security workflow.
+                </div>
+            </section>
+
+        </main>
+
+        <footer class="footer">
+            AI Visitor Security System · Smart College Visitor Management
+        </footer>
+    </div>
+
+    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
 
 </body>
+
 </html>

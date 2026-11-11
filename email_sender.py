@@ -51,6 +51,7 @@ def build_decision_email(visitor: dict) -> tuple[str, str]:
     """Build the approval/rejection email subject and plain-text body."""
     status = visitor.get("Approval Status", "")
     registration_id = visitor.get("Registration ID", "")
+    rejection_reason = (visitor.get("Rejection Reason") or "").strip()
 
     if status == "Approved":
         subject = f"Your Visit Has Been Approved - {registration_id}"
@@ -79,6 +80,9 @@ Status: {status}
 
 {status_line}
 """
+
+    if rejection_reason:
+        body += f"\nReason for rejection: {rejection_reason}\n"
 
     return subject, body
 
