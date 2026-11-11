@@ -14,7 +14,7 @@
             <p>Every registered visitor with approval status, newest first</p>
         </div>
         <span class="badge badge-green" id="historyCountBadge">
-            {{ registrations|default([])|length }} Total
+            {{ registration_total|default(registrations|default([])|length) }} Total
         </span>
     </div>
 
@@ -68,14 +68,17 @@
 
     <div class="date-error" id="historyDateError" role="alert"></div>
 
+    {% set total_records = registration_total|default(registrations|default([])|length) %}
+    {% set records_end = (10 if total_records > 10 else total_records) %}
     <div class="records-summary">
         <span id="historySummary">
-            Showing {{ registrations|default([])|length }} of
-            {{ registrations|default([])|length }} records
+            Showing {{ 1 if total_records else 0 }}–{{ records_end }} of
+            {{ total_records }} records
         </span>
-        <span class="table-subtext">
-            Dates filter on the registration time
-        </span>
+        <div class="pagination" id="historyPager"></div>
+    </div>
+    <div class="table-subtext records-hint">
+        Dates filter on the registration time
     </div>
 
     <div class="table-wrap">
@@ -94,7 +97,7 @@
             </thead>
             <tbody id="historyTableBody">
                 {% if registrations %}
-                {% for visitor in registrations %}
+                {% for visitor in (registrations|default([]))[:10] %}
                 <tr>
                     <td>
                         <strong>{{ visitor.get('Name', '') }}</strong><br>
@@ -181,7 +184,7 @@
             </thead>
             <tbody id="logsTableBody">
                 {% if logs %}
-                {% for log in logs %}
+                {% for log in (logs|default([]))[:10] %}
                 <tr>
                     <td>{{ log.get('Visitor Name', '') }}</td>
                     <td>{{ log.get('Date', '') }}</td>
@@ -208,6 +211,16 @@
                 {% endif %}
             </tbody>
         </table>
+    </div>
+
+    {% set total_events = log_total|default(logs|default([])|length) %}
+    {% set events_end = (10 if total_events > 10 else total_events) %}
+    <div class="pagination-bar">
+        <span class="pagination-summary" id="logsSummary">
+            Showing {{ 1 if total_events else 0 }}–{{ events_end }} of
+            {{ total_events }} events
+        </span>
+        <div class="pagination" id="logsPager"></div>
     </div>
 
     <div class="notice">

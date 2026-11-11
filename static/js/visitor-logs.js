@@ -1,8 +1,28 @@
 import { $, escapeHTML, fetchJSON, setText } from "./utils.js";
 import { setButtonLoading } from "./loading.js";
 import { emptyStateHTML } from "./empty-state.js";
+import { createPaginator } from "./pagination.js";
 
 let allLogs = [];
+let paginator = null;
+
+function getPaginator() {
+    if (!paginator) {
+        paginator = createPaginator({
+            controlsId: "logsPager",
+            summaryId: "logsSummary",
+            pageSize: 10,
+            label: "events",
+            onChange: () => renderLogs(allLogs)
+        });
+    }
+    return paginator;
+}
+
+function resetAndRender() {
+    getPaginator().reset();
+    renderLogs(allLogs);
+}
 
 export function logRowHTML(log) {
     const status = String(log.Status ?? "");
@@ -36,10 +56,12 @@ function renderLogs(logs) {
         )
     );
 
+    const view = getPaginator().paginate(filtered);
+
     const tbody = $("logsTableBody");
     if (!tbody) return;
 
-    if (!filtered.length) {
+    if (!view.total) {
         // Distinguish "search matched nothing" from "no data at all".
         tbody.innerHTML = emptyRow(
             query
@@ -58,7 +80,7 @@ function renderLogs(logs) {
         return;
     }
 
-    tbody.innerHTML = filtered.map(logRowHTML).join("");
+    tbody.innerHTML = view.items.map(logRowHTML).join("");
 }
 
 export async function loadLogs() {
@@ -97,6 +119,7 @@ export async function loadLogs() {
                     variant: "error"
                 }));
             }
+            setText("logsSummary", "Could not load visitor logs.");
             return null;
         }
 
@@ -109,7 +132,7 @@ export function initVisitorLogs() {
     const refreshButton = $("refreshLogsButton");
 
     if (search) {
-        search.addEventListener("input", () => renderLogs(allLogs));
+        search.addEventListener("input", resetAndRender);
     }
 
     const tbody = $("logsTableBody");
@@ -117,7 +140,7 @@ export function initVisitorLogs() {
         tbody.addEventListener("click", event => {
             if (event.target.id === "clearLogSearch" && search) {
                 search.value = "";
-                renderLogs(allLogs);
+                resetAndRender();
                 search.focus();
             }
         });

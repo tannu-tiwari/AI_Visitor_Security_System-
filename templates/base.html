@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/camera.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/tables.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/history.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/pagination.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/loading.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/modal.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/toast.css') }}">
@@ -58,6 +59,12 @@
                     aria-current="{{ 'page' if request.path == '/approvals' }}">
                     <span class="nav-icon">✅</span>
                     Host Approvals
+                </a>
+                <a href="{{ url_for('approval_history_page') }}"
+                    class="nav-link{{ ' active' if request.path == '/approval-history' }}"
+                    aria-current="{{ 'page' if request.path == '/approval-history' }}">
+                    <span class="nav-icon">🗂</span>
+                    Approval History
                 </a>
                 <a href="{{ url_for('inside_visitors_page') }}"
                     class="nav-link{{ ' active' if request.path == '/inside-visitors' }}"

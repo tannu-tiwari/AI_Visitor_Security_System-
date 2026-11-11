@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Approval History · AI Visitor Security System{% endblock %}
+
+{% block page_title %}Approval History{% endblock %}
+{% block page_subtitle %}Recorded host decisions for approved and rejected visitor requests{% endblock %}
+
+{% block content %}
+
+<section class="panel table-panel">
+    <div class="panel-heading">
+        <div>
+            <h3>Recorded Decisions</h3>
+            <p>Approved and rejected requests with the host, decision time, and reason where stored</p>
+        </div>
+        <span class="badge badge-green" id="approvalHistoryBadge">
+            {{ total_decisions|default(0) }} Decisions
+        </span>
+    </div>
+
+    <div class="records-toolbar">
+        <input class="search-input" type="search" id="approvalHistorySearch"
+            placeholder="Search visitor, host, decision maker, status, reason...">
+
+        <button class="button button-secondary" id="refreshApprovalHistoryButton">
+            Refresh
+        </button>
+    </div>
+
+    <div class="pagination-bar">
+        {% set shown_end = (page_size if total_decisions > page_size else total_decisions) %}
+        <span class="pagination-summary" id="approvalHistorySummary">
+            Showing {{ 1 if total_decisions else 0 }}–{{ shown_end }} of
+            {{ total_decisions|default(0) }} decisions
+        </span>
+        <div class="pagination" id="approvalHistoryPager"></div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Visitor</th>
+                    <th>Host</th>
+                    <th>Decision By</th>
+                    <th>Decision</th>
+                    <th>Decided At</th>
+                    <th>Rejection Reason</th>
+                </tr>
+            </thead>
+            <tbody id="approvalHistoryBody">
+                {% if history %}
+                {% for visitor in history %}
+                <tr>
+                    <td>
+                        <strong>{{ visitor.get('Name', '') or 'Unknown' }}</strong><br>
+                        <span class="table-subtext">
+                            {{ visitor.get('Registration ID', '') or '—' }}
+                        </span>
+                    </td>
+                    <td>{{ visitor.get('Host', '') or 'Not provided' }}</td>
+                    <td>{{ visitor.get('Decision By', '') or 'Not recorded' }}</td>
+                    <td>
+                        {% set status = visitor.get('Approval Status', '') %}
+                        {% set status_class =
+                            'badge-green' if status == 'Approved'
+                            else ('badge-red' if status == 'Rejected'
+                            else 'badge-gray') %}
+                        <span class="badge {{ status_class }}">{{ status }}</span>
+                    </td>
+                    <td>
+                        {% set decided_at = visitor.get('Decision At', '') %}
+                        {{ decided_at.replace('T', ' ') if decided_at else 'Not recorded' }}
+                    </td>
+                    <td>
+                        {% if status == 'Rejected' %}
+                        {{ visitor.get('Rejection Reason', '') or 'Not recorded' }}
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <div class="empty-icon" aria-hidden="true">🗂</div>
+                            <h4>No approval decisions yet</h4>
+                            <p>Approved and rejected visitor requests will appear here once a host acts on them.</p>
+                            <a class="button button-secondary small-button"
+                                href="{{ url_for('approvals_page') }}">
+                                Review Pending Requests
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="notice">
+        History is derived from the stored approval status of each registration, newest
+        decision first. Older approvals recorded before decision details were captured
+        show "Not recorded" rather than invented values. Pending requests appear on the
+        Host Approvals page.
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/approval-history.js') }}"></script>
+{% endblock %}

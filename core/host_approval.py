@@ -54,3 +54,31 @@ def get_pending_approvals():
         visitor for visitor in registrations
         if visitor.get("Approval Status") == "Pending"
     ]
+
+
+def get_approval_history():
+    """
+    Processed approval decisions, newest first.
+
+    A decision is any registration whose status is Approved or Rejected.
+    Pending requests are not decisions and are excluded. Older approvals may
+    predate the Decision By / Decision At fields; those records are returned
+    exactly as stored so callers can show them as "not recorded" instead of
+    inventing decision details.
+    """
+    registrations = load_registrations()
+
+    history = [
+        visitor for visitor in registrations
+        if visitor.get("Approval Status") in ("Approved", "Rejected")
+    ]
+
+    history.sort(
+        key=lambda visitor: str(
+            visitor.get("Decision At") or
+            visitor.get("Registration Time") or ""
+        ),
+        reverse=True
+    )
+
+    return history

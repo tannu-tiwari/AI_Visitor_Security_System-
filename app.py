@@ -32,6 +32,7 @@ from core.visitor_registration import (
 )
 
 from core.host_approval import (
+    get_approval_history,
     get_pending_approvals,
     update_approval
 )
@@ -124,6 +125,18 @@ def approvals_page():
     return render_template("approvals.html")
 
 
+@app.route("/approval-history")
+def approval_history_page():
+    history = get_approval_history()
+
+    return render_template(
+        "approval_history.html",
+        history=history[:10],
+        total_decisions=len(history),
+        page_size=10
+    )
+
+
 @app.route("/inside-visitors")
 def inside_visitors_page():
     return render_template("inside_visitors.html")
@@ -148,7 +161,9 @@ def visitor_history_page():
     return render_template(
         "visitor_history.html",
         logs=logs[::-1],
+        log_total=len(logs),
         registrations=registrations[::-1],
+        registration_total=len(registrations),
         departments=departments,
         inside_names=inside_names
     )
@@ -191,6 +206,11 @@ def registrations_api():
 @app.route("/api/pending-approvals")
 def pending_approvals_api():
     return jsonify(get_pending_approvals())
+
+
+@app.route("/api/approval-history")
+def approval_history_api():
+    return jsonify(get_approval_history())
 
 
 # --------------------------------------------------

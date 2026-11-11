@@ -3,6 +3,131 @@ import { confirmDialog } from "./modal.js";
 import { toast } from "./toast.js";
 import { setButtonLoading } from "./loading.js";
 import { emptyStateHTML } from "./empty-state.js";
+import { createPaginator } from "./pagination.js";
+
+let lastInside = [];
+let lastApproved = [];
+let insidePaginator = null;
+let approvedPaginator = null;
+
+function getInsidePaginator() {
+    if (!insidePaginator) {
+        insidePaginator = createPaginator({
+            controlsId: "insidePager",
+            summaryId: "insideSummary",
+            pageSize: 10,
+            label: "visitors inside",
+            onChange: () => renderInsideVisitors(lastInside)
+        });
+    }
+    return insidePaginator;
+}
+
+function getApprovedPaginator() {
+    if (!approvedPaginator) {
+        approvedPaginator = createPaginator({
+            controlsId: "approvedPager",
+            summaryId: "approvedSummary",
+            pageSize: 10,
+            label: "approved visitors",
+            onChange: () => renderApprovedVisitors(lastApproved)
+        });
+    }
+    return approvedPaginator;
+}
+
+function insideCardHTML(visitor) {
+    const name = visitor.Name || visitor.name ||
+        visitor["Visitor Name"] || "Unknown";
+    const time = visitor["Entry Time"] ||
+        visitor.entry_time || visitor.time || "";
+
+    return `
+        <div class="list-item">
+            <h4>${escapeHTML(name)}</h4>
+            <p>Entry time: ${escapeHTML(time || "Not available")}</p>
+            <div class="list-actions">
+                <button class="button button-danger small-button"
+                    data-exit-name="${escapeHTML(name)}"
+                    data-exit-time="${escapeHTML(time)}">
+                    Mark Exit
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function approvedCardHTML(visitor) {
+    const name = visitor.Name || visitor.name || "Visitor";
+    const id = visitor["Registration ID"] || visitor.registration_id ||
+        visitor.id || "";
+    const purpose = visitor.Purpose || visitor.purpose || "";
+    const host = visitor.Host || visitor.host || "";
+
+    return `
+        <div class="list-item">
+            <h4>${escapeHTML(name)}</h4>
+            <p>Purpose: ${escapeHTML(purpose)}<br>
+               Host: ${escapeHTML(host)}<br>
+               Status: <span class="badge badge-green">Approved</span></p>
+            <div class="list-actions">
+                <button class="button button-primary small-button"
+                    data-entry-name="${escapeHTML(name)}"
+                    data-entry-id="${escapeHTML(id)}"
+                    data-entry-purpose="${escapeHTML(purpose)}"
+                    data-entry-host="${escapeHTML(host)}">
+                    Mark Entry
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function renderInsideVisitors(visitors) {
+    lastInside = visitors;
+    setText("insideVisitors", visitors.length);
+    setText("insideBadge", visitors.length + " Visitors");
+
+    const list = $("insideList");
+    if (!list) return visitors;
+
+    const view = getInsidePaginator().paginate(visitors);
+
+    if (!view.total) {
+        list.innerHTML = emptyStateHTML({
+            icon: "🏢",
+            title: "No visitors currently inside",
+            message: "When an approved visitor is marked as entered, they will appear here."
+        });
+        return visitors;
+    }
+
+    list.innerHTML = view.items.map(insideCardHTML).join("");
+    return visitors;
+}
+
+function renderApprovedVisitors(approved) {
+    lastApproved = approved;
+    setText("approvedBadge", approved.length + " Approved");
+
+    const list = $("approvedList");
+    if (!list) return approved;
+
+    const view = getApprovedPaginator().paginate(approved);
+
+    if (!view.total) {
+        list.innerHTML = emptyStateHTML({
+            icon: "👥",
+            title: "No approved visitors",
+            message: "Visitors approved by their host will appear here, ready to be marked as entered.",
+            action: { label: "Review Approvals", href: "/approvals" }
+        });
+        return approved;
+    }
+
+    list.innerHTML = view.items.map(approvedCardHTML).join("");
+    return approved;
+}
 
 export async function loadInsideVisitors() {
     try {
@@ -11,43 +136,7 @@ export async function loadInsideVisitors() {
             ? data
             : (data.visitors || data.open_visitors || []);
 
-        setText("insideVisitors", visitors.length);
-        setText("insideBadge", visitors.length + " Visitors");
-
-        const list = $("insideList");
-        if (!list) return visitors;
-
-        if (!visitors.length) {
-            list.innerHTML = emptyStateHTML({
-                icon: "🏢",
-                title: "No visitors currently inside",
-                message: "When an approved visitor is marked as entered, they will appear here."
-            });
-            return visitors;
-        }
-
-        list.innerHTML = visitors.map(visitor => {
-            const name = visitor.Name || visitor.name ||
-                visitor["Visitor Name"] || "Unknown";
-            const time = visitor["Entry Time"] ||
-                visitor.entry_time || visitor.time || "";
-
-            return `
-                <div class="list-item">
-                    <h4>${escapeHTML(name)}</h4>
-                    <p>Entry time: ${escapeHTML(time || "Not available")}</p>
-                    <div class="list-actions">
-                        <button class="button button-danger small-button"
-                            data-exit-name="${escapeHTML(name)}"
-                            data-exit-time="${escapeHTML(time)}">
-                            Mark Exit
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join("");
-
-        return visitors;
+        return renderInsideVisitors(visitors);
     } catch (error) {
         console.error("Could not load open visitors:", error);
         const list = $("insideList");
@@ -74,47 +163,7 @@ export async function loadApprovedVisitors() {
                 .toLowerCase() === "approved"
         );
 
-        setText("approvedBadge", approved.length + " Approved");
-
-        const list = $("approvedList");
-        if (!list) return approved;
-
-        if (!approved.length) {
-            list.innerHTML = emptyStateHTML({
-                icon: "👥",
-                title: "No approved visitors",
-                message: "Visitors approved by their host will appear here, ready to be marked as entered.",
-                action: { label: "Review Approvals", href: "/approvals" }
-            });
-            return approved;
-        }
-
-        list.innerHTML = approved.map(visitor => {
-            const name = visitor.Name || visitor.name || "Visitor";
-            const id = visitor["Registration ID"] || visitor.registration_id || visitor.id || "";
-            const purpose = visitor.Purpose || visitor.purpose || "";
-            const host = visitor.Host || visitor.host || "";
-
-            return `
-                <div class="list-item">
-                    <h4>${escapeHTML(name)}</h4>
-                    <p>Purpose: ${escapeHTML(purpose)}<br>
-                       Host: ${escapeHTML(host)}<br>
-                       Status: <span class="badge badge-green">Approved</span></p>
-                    <div class="list-actions">
-                        <button class="button button-primary small-button"
-                            data-entry-name="${escapeHTML(name)}"
-                            data-entry-id="${escapeHTML(id)}"
-                            data-entry-purpose="${escapeHTML(purpose)}"
-                            data-entry-host="${escapeHTML(host)}">
-                            Mark Entry
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join("");
-
-        return approved;
+        return renderApprovedVisitors(approved);
     } catch (error) {
         console.error("Could not load approved visitors:", error);
         const list = $("approvedList");

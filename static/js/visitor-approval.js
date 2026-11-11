@@ -4,30 +4,25 @@ import { formDialog } from "./modal.js";
 import { toast } from "./toast.js";
 import { setButtonLoading } from "./loading.js";
 import { emptyStateHTML } from "./empty-state.js";
+import { createPaginator } from "./pagination.js";
 
-export async function loadApprovals() {
-    try {
-        const data = await fetchJSON("/api/pending-approvals");
-        const approvals = Array.isArray(data)
-            ? data
-            : (data.approvals || data.pending || []);
+let lastApprovals = [];
+let paginator = null;
 
-        setText("pendingBadge", approvals.length + " Pending");
+function getPaginator() {
+    if (!paginator) {
+        paginator = createPaginator({
+            controlsId: "approvalPager",
+            summaryId: "approvalSummary",
+            pageSize: 10,
+            label: "pending requests",
+            onChange: () => renderApprovals(lastApprovals)
+        });
+    }
+    return paginator;
+}
 
-        const list = $("approvalList");
-        if (!list) return approvals;
-
-        if (!approvals.length) {
-            list.innerHTML = emptyStateHTML({
-                icon: "🕐",
-                title: "No pending approvals",
-                message: "New visitor requests will appear here for host review.",
-                action: { label: "Register a Visitor", href: "/registration" }
-            });
-            return approvals;
-        }
-
-        list.innerHTML = approvals.map(visitor => {
+function approvalCardHTML(visitor) {
             const name = visitor.Name || visitor.name || "Visitor";
             const phone = visitor.Phone || visitor.phone || "Not provided";
             const email = visitor.Email || visitor.email || "Not provided";
@@ -87,10 +82,40 @@ export async function loadApprovals() {
                     </div>
                 </div>
             `;
-        }).join("");
+}
 
+function renderApprovals(approvals) {
+    lastApprovals = approvals;
+    setText("pendingBadge", approvals.length + " Pending");
+
+    const list = $("approvalList");
+    if (!list) return approvals;
+
+    const view = getPaginator().paginate(approvals);
+
+    if (!view.total) {
+        list.innerHTML = emptyStateHTML({
+            icon: "🕐",
+            title: "No pending approvals",
+            message: "New visitor requests will appear here for host review.",
+            action: { label: "Register a Visitor", href: "/registration" }
+        });
         return approvals;
+    }
 
+    list.innerHTML = view.items.map(approvalCardHTML).join("");
+    return approvals;
+}
+
+export async function loadApprovals() {
+    try {
+        const data = await fetchJSON("/api/pending-approvals");
+        const approvals = Array.isArray(data)
+            ? data
+            : (data.approvals || data.pending || []);
+
+        renderApprovals(approvals);
+        return approvals;
     } catch (error) {
         console.error("Approval loading error:", error);
         const list = $("approvalList");

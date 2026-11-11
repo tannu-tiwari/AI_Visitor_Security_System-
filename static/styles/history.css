@@ -67,6 +67,12 @@
     color: var(--muted);
 }
 
+/* Helper line under the records summary, above the table. */
+.records-hint {
+    display: block;
+    margin-bottom: 8px;
+}
+
 @media (max-width: 750px) {
     .records-toolbar {
         flex-direction: column;

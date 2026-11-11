@@ -1,5 +1,6 @@
 import { $, escapeHTML, fetchJSON, setText } from "./utils.js";
 import { emptyStateHTML } from "./empty-state.js";
+import { createPaginator } from "./pagination.js";
 
 // Visitor Records panel on the Visitor History page.
 //
@@ -10,6 +11,25 @@ import { emptyStateHTML } from "./empty-state.js";
 
 let allRecords = null; // null until the first successful load
 let insideNames = new Set();
+let paginator = null;
+
+function getPaginator() {
+    if (!paginator) {
+        paginator = createPaginator({
+            controlsId: "historyPager",
+            summaryId: "historySummary",
+            pageSize: 10,
+            label: "records",
+            onChange: applyFilters
+        });
+    }
+    return paginator;
+}
+
+function resetAndFilter() {
+    getPaginator().reset();
+    applyFilters();
+}
 
 // Registration fields covered by the free-text search box.
 const SEARCH_FIELDS = [
@@ -193,27 +213,23 @@ function renderRecords(records) {
         return;
     }
 
-    // Newest registrations first.
-    const sorted = records.slice().sort((a, b) =>
-        String(field(b, "Registration Time") ?? "")
-            .localeCompare(String(field(a, "Registration Time") ?? ""))
-    );
-
-    tbody.innerHTML = sorted.map(recordRowHTML).join("");
-}
-
-function updateSummary(shown) {
-    const total = allRecords.length;
-    setText("historySummary",
-        "Showing " + shown + " of " + total + " records");
-    setText("historyCountBadge", total + " Total");
+    tbody.innerHTML = records.map(recordRowHTML).join("");
 }
 
 function applyFilters() {
     if (!Array.isArray(allRecords)) return;
+
     const filtered = getFilteredRecords();
-    renderRecords(filtered);
-    updateSummary(filtered.length);
+
+    // Newest registrations first, then paginate the sorted result.
+    filtered.sort((a, b) =>
+        String(field(b, "Registration Time") ?? "")
+            .localeCompare(String(field(a, "Registration Time") ?? ""))
+    );
+
+    const view = getPaginator().paginate(filtered);
+    renderRecords(view.items);
+    setText("historyCountBadge", allRecords.length + " Total");
 }
 
 function refreshDepartmentOptions() {
@@ -258,7 +274,7 @@ export function clearHistoryFilters() {
     const dateError = $("historyDateError");
     if (dateError) dateError.textContent = "";
 
-    applyFilters();
+    resetAndFilter();
 }
 
 export async function loadVisitorHistory() {
@@ -309,19 +325,19 @@ export function initVisitorHistory() {
         let searchTimer;
         search.addEventListener("input", () => {
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(applyFilters, 200);
+            searchTimer = setTimeout(resetAndFilter, 200);
         });
     }
 
     ["historyApprovalFilter", "historyDepartmentFilter", "historyInsideFilter"]
         .forEach(id => {
             const select = $(id);
-            if (select) select.addEventListener("change", applyFilters);
+            if (select) select.addEventListener("change", resetAndFilter);
         });
 
     ["historyStartDate", "historyEndDate"].forEach(id => {
         const input = $(id);
-        if (input) input.addEventListener("change", applyFilters);
+        if (input) input.addEventListener("change", resetAndFilter);
     });
 
     const clearButton = $("clearHistoryButton");

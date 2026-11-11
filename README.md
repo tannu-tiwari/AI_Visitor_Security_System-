@@ -13,7 +13,7 @@ approval, and tracks who is currently inside through a security dashboard.
 - Visitor entry and exit tracking (who is currently inside).
 - Optional email notifications (registration + approval/rejection emails).
 - Multi-page dashboard with sidebar navigation: overview, registration,
-  recognition, approvals, inside visitors and visitor history.
+  recognition, approvals, approval history, inside visitors and visitor history.
 - Custom modal dialogs for approvals and entry/exit confirmations (no native
   browser popups).
 - Toast notifications and loading indicators for all actions.
@@ -24,6 +24,13 @@ approval, and tracks who is currently inside through a security dashboard.
   registration ID, host, department or purpose, filter by approval status,
   department and whether the visitor is currently inside, and restrict by a
   From/To date range on the registration time.
+- Approval History page: every approved/rejected decision, newest first, with
+  the host/decision maker, decision time and rejection reason (searchable).
+  Approvals made before decision details were stored show "Not recorded"
+  instead of invented values.
+- Pagination (10 per page) on visitor records, recognition events, approval
+  history, pending approval cards and both inside-visitors lists, with
+  boundary-disabled buttons, page clamping and reset-on-filter.
 - JSON API endpoints consumed by the pages (auto-refresh every 10s).
 
 ## Tech Stack
@@ -142,9 +149,12 @@ simply skipped.
 5. **Monitor** — the *Dashboard* page shows live statistics, recent activity
    and pending approvals; the *Face Recognition* page shows the live feed and
    the latest recognition results.
-6. **Review history** — the *Visitor History* page lists every registration
+6. **Review decisions** — the *Approval History* page lists every approved and
+   rejected request with the decision maker, decision time and rejection
+   reason (legacy approvals without those fields show "Not recorded").
+7. **Review history** — the *Visitor History* page lists every registration
    (searchable and filterable, including date ranges) plus all recognition
-   events with their own search.
+   events with their own search. Long lists are paginated 10 per page.
 
 ## Project Structure
 
@@ -166,14 +176,15 @@ templates/                    Jinja templates (page markup)
     registration.html         Photo capture + visitor registration form
     recognition.html          Live camera feed + recognition status
     approvals.html            Pending host approvals (approve / reject)
+    approval_history.html     Recorded approval decisions (search + pagination)
     inside_visitors.html      Entry and exit management
     visitor_history.html      Visitor records (search/filters/dates) + recognition logs
 static/styles/                Dashboard CSS, split by component
 static/js/                    Shared JavaScript modules (utils, camera,
                              photo capture, registration, logs, approvals,
-                             entry/exit, status pill, modal dialogs,
-                             toast notifications, loading indicators,
-                             empty states, visitor records)
+                             approval history, entry/exit, status pill, modal
+                             dialogs, toast notifications, loading indicators,
+                             empty states, visitor records, pagination)
 static/js/pages/             One entry module per page
 data/                         Runtime data files
     visitor_registrations.json  Visitor registrations + approval status
@@ -197,6 +208,7 @@ AGENT-MAP.md                  Developer minimap of the project
 | GET | `/registration` | Visitor registration page |
 | GET | `/recognition` | Face recognition page |
 | GET | `/approvals` | Host approvals page |
+| GET | `/approval-history` | Approval history page |
 | GET | `/inside-visitors` | Inside visitors page |
 | GET | `/visitor-history` | Visitor history page |
 | GET | `/health` | Health check |
@@ -206,6 +218,7 @@ AGENT-MAP.md                  Developer minimap of the project
 | GET | `/api/open-visitors` | Visitors currently inside |
 | GET | `/api/registrations` | All registrations |
 | GET | `/api/pending-approvals` | Pending host approvals |
+| GET | `/api/approval-history` | Approved/rejected decisions, newest first |
 | POST | `/save-capture` | Save captured visitor photo |
 | POST | `/register-visitor` | Register a visitor |
 | POST | `/host-approval/<id>/<decision>` | Approve / reject a request |
@@ -224,3 +237,6 @@ AGENT-MAP.md                  Developer minimap of the project
   intended.
 - The recognition confidence is a distance: lower is better. Anything below
   `50` is treated as a match.
+- Approval history is derived from the stored `Approval Status` of each
+  registration. Earlier approvals made before decision details were captured
+  show "Not recorded" — the app never fabricates a decision maker or time.

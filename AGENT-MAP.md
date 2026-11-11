@@ -2,9 +2,11 @@
 
 > Read this first at the start of any session. It describes what the project is,
 > where everything lives, how the pieces connect, and what is likely still to do.
-> Last updated: 2026-11-11 (consistent empty/error states across all lists,
-> Visitor History search + filters + date range, on top of the multi-page split,
-> root-folder restructure, modal/toast/loading UI system and JS/CSS extraction).
+> Last updated: 2026-11-11 (Approval History page + reusable client-side
+> pagination across records, events, approvals and inside lists, on top of the
+> empty/error-state system, Visitor History search/filters/date range, the
+> multi-page split, root-folder restructure, modal/toast/loading UI system and
+> JS/CSS extraction).
 
 ## 1. What this project is
 
@@ -16,7 +18,7 @@ OpenCV face recognition with a live security dashboard for a college:
 3. Hosts approve/reject visitor requests.
 4. Tracks visitor entry/exit (who is currently inside).
 5. Shows stats + logs live on a multi-page dashboard (overview, registration,
-   recognition, approvals, inside visitors, history).
+   recognition, approvals, approval history, inside visitors, history).
 
 This is a college (Synergy) project. Repo: `github.com/tannu-tiwari/AI_Visitor_Security_System-`, branch `main`.
 
@@ -24,7 +26,7 @@ This is a college (Synergy) project. Repo: `github.com/tannu-tiwari/AI_Visitor_S
 
 - **Backend:** Python 3.11 (project venv), Flask (`render_template`, `jsonify`, `Response`).
 - **Vision:** OpenCV (`opencv-contrib-python` 4.10) — Haar cascade detection + LBPH face recognizer; NumPy.
-- **Frontend:** Jinja template inheritance (`base.html` + 6 page templates), vanilla ES modules loaded per page, no build step, no framework.
+- **Frontend:** Jinja template inheritance (`base.html` + 7 page templates), vanilla ES modules loaded per page, no build step, no framework.
 - **Email:** `python-dotenv` + `smtplib` — SMTP settings come from `.env` in the project root.
 - **Storage:** plain CSV + JSON files in `data/` (no database). Images as JPEG files.
 
@@ -62,7 +64,8 @@ Browser ──► /host-approval/<id>/<decision> ──► core/host_approval.up
              (decision emails via core/email_sender.py, never raise)
 Browser ──► /mark-entry, /mark-exit ──► core/visitor_logs.mark_entry/mark_exit ──► data/visitor_tracking.json
 Browser ──► /api/visitor-logs, /api/open-visitors, /api/registrations,
-             /api/pending-approvals, /camera-status  (JSON polling every 10s)
+             /api/pending-approvals, /api/approval-history, /camera-status
+             (JSON polling every 10s)
 ```
 
 ## 5. File map
@@ -75,7 +78,7 @@ Browser ──► /api/visitor-logs, /api/open-visitors, /api/registrations,
 | `core/face_recognition.py` | **Live recognition module**. Loads LBPH model + Haar cascade once (`initialize_recognition`), opens webcam once (`get_camera`), yields annotated MJPEG frames (`generate_frames`), `camera_available()`, `release_camera()`. Threshold `CONFIDENCE_THRESHOLD=50`, per-person logging throttle `LOG_INTERVAL=30s`. |
 | `core/visitor_logs.py` | Log/tracking logic: `log_visitor` (append to CSV), `mark_entry`/`mark_exit` (tracking JSON), `get_open_visitors`, `load_visit_tracking`. Paths are `__file__`-based (CWD independent). |
 | `core/visitor_registration.py` | `register_visitor(...)` creates a registration with `Registration ID=VIS-<timestamp>` and `Approval Status=Pending`; `load_registrations`. Exports `REGISTRATION_FILE`. |
-| `core/host_approval.py` | `update_approval(registration_id, decision, decided_by, rejection_reason)` sets Approved/Rejected (only from Pending) and records `Decision By` / `Decision At` / `Rejection Reason`; `get_pending_approvals`. |
+| `core/host_approval.py` | `update_approval(registration_id, decision, decided_by, rejection_reason)` sets Approved/Rejected (only from Pending) and records `Decision By` / `Decision At` / `Rejection Reason`; `get_pending_approvals`; `get_approval_history` (derived Approved/Rejected records, newest decision first, legacy records returned as stored). |
 | `core/email_sender.py` | SMTP emails: `send_registration_email`, `send_decision_email` (never raise). Loads `.env` from the project root. |
 | `scripts/train_model.py` | Trains LBPH on `dataset/<person>/*.jpg`, saves `model/face_model.yml` + `model/label_names.npy`. Sorts names alphabetically → label IDs. |
 | `scripts/face_capture.py` | Interactive script: prompts for a name, captures 100 face crops into `dataset/<name>/`. |
@@ -91,10 +94,11 @@ Browser ──► /api/visitor-logs, /api/open-visitors, /api/registrations,
 | `templates/recognition.html` | Live `/video_feed` stream, camera badge + Check/Restart/Retry controls, recent recognition events. |
 | `templates/approvals.html` | Pending approvals with photos + approve/reject (modal dialog asks for the host's name; rejections also require a reason). |
 | `templates/inside_visitors.html` | Approved Visitors (Mark Entry) + Currently Inside (Mark Exit), each behind a confirmation modal. |
-| `templates/visitor_history.html` | **Visitor Records panel** (all registrations, client-side search/filters/date range) + **Recognition Events panel** (full logs table + client-side search). |
-| `static/styles/*.css` | Dashboard CSS split by component (base, layout, **sidebar**, topbar, buttons, badges, stats, panels, forms, camera, tables, **history**, **loading**, **modal**, **toast**). |
+| `templates/visitor_history.html` | **Visitor Records panel** (all registrations, client-side search/filters/date range) + **Recognition Events panel** (full logs table + client-side search); both paginated 10 rows/page. |
+| `templates/approval_history.html` | **Approval History page**: recorded Approved/Rejected decisions (host, decision time, rejection reason), search, 10 decisions/page; legacy records show "Not recorded". |
+| `static/styles/*.css` | Dashboard CSS split by component (base, layout, **sidebar**, topbar, buttons, badges, stats, panels, forms, camera, tables, **history**, **pagination**, **loading**, **modal**, **toast**). |
 | `static/js/*.js` | Shared feature modules (see §7). |
-| `static/js/pages/*.js` | Per-page entry modules (dashboard, registration, recognition, approvals, inside-visitors, visitor-history). |
+| `static/js/pages/*.js` | Per-page entry modules (dashboard, registration, recognition, approvals, approval-history, inside-visitors, visitor-history). |
 
 No page uses native `prompt()`/`confirm()`/`alert()` any more — all
 confirmations and small forms go through the shared modal, all transient
@@ -123,12 +127,14 @@ feedback goes through toasts (registration keeps its inline feedback panel).
 | GET | `/recognition` | `recognition_page` | Live recognition feed page. |
 | GET | `/approvals` | `approvals_page` | Host approvals page. |
 | GET | `/inside-visitors` | `inside_visitors_page` | Entry/exit management page. |
-| GET | `/visitor-history` | `visitor_history_page` | Visitor Records (server-rendered registrations, searched/filtered client-side) + recognition logs (server-rendered rows + JS search). |
+| GET | `/approval-history` | `approval_history_page` | Approval History page: first page of processed decisions server-rendered, searched/paged client-side. |
+| GET | `/visitor-history` | `visitor_history_page` | Visitor Records (server-rendered first 10 registrations, searched/filtered/paged client-side) + recognition logs (first 10 rows + JS search/pagination). |
 | GET | `/health` | `health_check` | JSON liveness. |
 | GET | `/api/visitor-logs` | `visitor_logs_api` | Stats + reversed logs. |
 | GET | `/api/open-visitors` | `open_visitors_api` | Visitors currently `Inside`. |
 | GET | `/api/registrations` | `registrations_api` | All registrations. |
 | GET | `/api/pending-approvals` | `pending_approvals_api` | Registrations with `Pending` status. |
+| GET | `/api/approval-history` | `approval_history_api` | All Approved/Rejected registrations, newest decision first (derived; no fabricated fields). |
 | POST | `/save-capture` | `save_capture` | Decode base64 JPEG, validate magic bytes, save to `visitor_captures/`. Returns `filename`. |
 | GET | `/visitor-captures/<filename>` | `serve_visitor_capture` | Serve a saved visitor photo (sanitized name, `.jpg/.jpeg/.png` only). |
 | POST | `/register-visitor` | `register_new_visitor` | Accepts JSON or form; requires photo first (frontend enforces). Sends registration email if configured. |
@@ -152,18 +158,21 @@ one feature module can serve several pages.
 | `toast.js` | all pages that act | `toast.success/error/warning/info(message)` — stacked, auto-dismissing (errors last longer), manually closable, capped at 5 visible, messages set via `textContent`. |
 | `loading.js` | all | `setButtonLoading(button, busy, label)` — disables the button, adds a spinner + `aria-busy`, stores/restores the original label. |
 | `empty-state.js` | all list/table pages | `emptyStateHTML({icon, title, message, action, variant})` — shared empty/error markup. Action is a link (`href`) or a delegated button (`id`); `variant: "error"` styles request failures differently from genuinely empty data. All strings escaped. |
+| `pagination.js` | all data-heavy lists | `createPaginator({controlsId, summaryId, pageSize, label, onChange})` → `paginate(items)` returns `{items, page, totalPages, total, start, end}` and paints `Previous / Page X of Y / Next` + "Showing A–B of N …". Clamps the page when data shrinks, `reset()` on filter/search changes, disables boundary buttons, blocks duplicate clicks while `onChange` is pending (`aria-busy` + busy class), and tolerates missing elements. Client-side: filter/sort first, then paginate. |
 | `status-pill.js` | base (all pages) | One `/camera-status` fetch → header pill. |
 | `camera-feed.js` | recognition | `checkCamera` (pill + panel badge), retry/restart feed buttons. |
 | `photo-capture.js` | registration | `captureVisitorPhoto` (canvas ← feed `<img>` → `/save-capture`), `retakeVisitorPhoto`, reveals the form; busy capture button, toast on failure. |
 | `visitor-registration.js` | registration | Form submit → `/register-visitor`; photo-first gating; submit button busy state; inline feedback panel; pending-list refresh only if present. |
-| `visitor-logs.js` | history, dashboard, recognition | `loadLogs` (updates stat cards when present, returns logs; returns `null` if the request fails and no stale data exists), `logRowHTML`, search + refresh (refresh button busy while fetching). Search has three distinct states: matching rows, "no match" (with a clear-search action) and "no logs yet"; failures keep stale rows or show an error state. |
-| `visitor-records.js` | history | Visitor Records table: `loadVisitorHistory` fetches `/api/registrations` + `/api/open-visitors` (for the Inside badge), renders newest-first; `initVisitorHistory` wires the debounced search (name/phone/email/registration ID/host/department/purpose), approval-status, department, visit-status and date-range filters, plus "Clear Filters". Filtering is client-side (small dataset already returned by the API). Invalid date ranges show an inline error and skip only the date part. |
-| `visitor-approval.js` | approvals, dashboard | `loadApprovals` (returns list, updates badge when present); delegated approve/reject opens a `formDialog` (host name, required; + reason when rejecting) that POSTs the unchanged payload; success/failure toasts; row button disabled during the flow. |
-| `visitor-entry-exit.js` | inside-visitors, dashboard | `loadInsideVisitors` / `loadApprovedVisitors` (return data, update badges/stats when present); delegated Mark Entry / Mark Exit open a `confirmDialog` identifying the visitor (host/purpose/entry time) before posting; toasts + list refresh on success, row button disabled during the flow. |
+| `visitor-logs.js` | history, dashboard, recognition | `loadLogs` (updates stat cards when present, returns logs; returns `null` if the request fails and no stale data exists), `logRowHTML`, search + refresh (refresh button busy while fetching). Search has three distinct states: matching rows, "no match" (with a clear-search action) and "no logs yet"; failures keep stale rows or show an error state. Paged 10 events/page; search resets to page 1. |
+| `visitor-records.js` | history | Visitor Records table: `loadVisitorHistory` fetches `/api/registrations` + `/api/open-visitors` (for the Inside badge), sorts newest-first, then paginates (10/page); `initVisitorHistory` wires the debounced search (name/phone/email/registration ID/host/department/purpose), approval-status, department, visit-status and date-range filters, plus "Clear Filters". Filtering is client-side (small dataset already returned by the API); any filter/search change resets to page 1. Invalid date ranges show an inline error and skip only the date part. |
+| `approval-history.js` | approval-history | `loadApprovalHistory` fetches `/api/approval-history`, filters by search (visitor, ID, host, status, decision maker, rejection reason), sorts newest-first and paginates (10/page); `initApprovalHistory` wires the debounced search, refresh button and clear-search action. Missing legacy `Decision By`/`Decision At` render as "Not recorded"; `T` in stored timestamps is displayed as a space. |
+| `visitor-approval.js` | approvals, dashboard | `loadApprovals` (returns list, updates badge, paginates cards 10/page); delegated approve/reject opens a `formDialog` (host name, required; + reason when rejecting) that POSTs the unchanged payload; success/failure toasts; row button disabled during the flow. Pager re-renders from the cached list (no extra fetch). |
+| `visitor-entry-exit.js` | inside-visitors, dashboard | `loadInsideVisitors` / `loadApprovedVisitors` (return data, update badges/stats when present) each paginate their list 10/page; delegated Mark Entry / Mark Exit open a `confirmDialog` identifying the visitor (host/purpose/entry time) before posting; toasts + list refresh on success, row button disabled during the flow. Pager re-renders from cache. |
 | `pages/dashboard.js` | `/` | Refresh button (busy while refreshing) + 10s polling: logs, pending, inside → stat cards + read-only summaries. |
 | `pages/registration.js` | `/registration` | `initPhotoCapture` + `initVisitorRegistration`. |
 | `pages/recognition.js` | `/recognition` | `initCameraFeed` + `checkCamera` + 10s recent-events polling. |
 | `pages/approvals.js` | `/approvals` | `initVisitorApproval` + 10s pending polling. |
+| `pages/approval-history.js` | `/approval-history` | `initApprovalHistory` + `loadApprovalHistory` + 10s polling (page preserved; clamped when records shrink). |
 | `pages/inside-visitors.js` | `/inside-visitors` | `initVisitorEntryExit` + 10s polling of both lists. |
 | `pages/visitor-history.js` | `/visitor-history` | `initVisitorLogs` + `initVisitorHistory` + `loadLogs` + `loadVisitorHistory` + 10s polling of both panels. |
 
@@ -182,6 +191,8 @@ above); their POST payloads and endpoints are unchanged.
 - First 3 rows of `data/visitor_registrations.json` lack the `Photo Filename` key (added later feature); frontend tolerates missing keys.
 - `data/visitor_tracking.json` records use the key **`Visitor Name`** (not `Name`). `app.py` joins open visitors to registrations by that key for the server-rendered Inside badge; `visitor-records.js` prefers `Name` but falls back through `name`/`Visitor Name`.
 - Registration timestamps are stored as `"YYYY-MM-DD HH:MM:SS"`; the history date filter compares the first 10 characters against `<input type="date">` values (inclusive ISO string comparison). Rows without a parseable timestamp are excluded only while a date filter is active.
+- **Approval decisions:** `Decision At` is stored as ISO with `T` (`datetime.now().isoformat(timespec="seconds")`); the UI swaps `T` for a space. Older "Approved" records predate the decision fields and have **no** `Decision By`/`Decision At` — Approval History derives from `Approval Status` and shows "Not recorded"; it never fabricates values. Deleting a record is not exposed, so history is append-only.
+- **Pagination is client-side**: every API above still returns the full array; the shared paginator slices 10/page after search/filter/sort. Data refresh keeps the current page (clamped); changing search/filters resets to page 1. Server-rendered pages show only the first 10 rows for no-JS parity (`[:10]` in Jinja).
 - `register_visitor` requires `name, phone, purpose, host, department`; `email` optional.
 - `scripts/face_capture.py` and `scripts/face_detection.py` open their own `cv2.VideoCapture(0)` — do not run them while `app.py` streams the same camera.
 - Emails only send when `.env` has `SMTP_USER` + `SMTP_PASSWORD` (`is_email_configured()`); `core/email_sender.py` never raises — failures are logged and the API still succeeds with `email_sent: false`.
@@ -217,6 +228,14 @@ Completed in recent refactors (uncommitted, see §10):
       email, registration ID, host, department and purpose; approval-status,
       department and visit-status (inside/outside) filters; From/To date range
       on Registration Time; result count; clear-filters; client-side filtering.
+- [x] Approval History page (`/approval-history` + `/api/approval-history`):
+      Approved/Rejected decisions only, newest first, visitor/host/decision-maker/
+      status/rejection reason; search; honest "Not recorded" for legacy approvals.
+- [x] Reusable pagination (`pagination.js` + `pagination.css`, 10/page) on
+      Visitor Records, Recognition Events, Approval History, Pending Approvals
+      cards and both Inside Visitors lists; boundary-disabled controls, page
+      clamping, reset on search/filter change, busy state during page changes,
+      duplicate-click protection, and server-rendered first page for no-JS.
 
 Still open:
 
@@ -237,7 +256,9 @@ Still open:
   templates + `static/js/pages/`), the modal/toast/loading UI system, the
   two-column approval cards, consistent empty/error states (`empty-state.js`),
   the Visitor History records panel (`visitor-records.js` + `history.css`),
-  `.gitignore`/README/AGENT-MAP updates.
+  the Approval History page (`approval-history.js`, `approval_history.html`,
+  `/api/approval-history`), shared pagination (`pagination.js` +
+  `pagination.css`), `.gitignore`/README/AGENT-MAP updates.
 - Tracked junk (`server_*.log`, `server_test.pid`, `visitor_registrations.json.testbak`,
   `__pycache__/` incl. a stray `__pycache__/templates/dashboard.html`) has been
   deleted from the working tree; `.gitignore` now prevents them from returning.
