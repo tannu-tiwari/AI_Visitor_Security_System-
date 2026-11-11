@@ -3,16 +3,36 @@ import { loadLogs, logRowHTML } from "../visitor-logs.js";
 import { loadInsideVisitors } from "../visitor-entry-exit.js";
 import { loadApprovals } from "../visitor-approval.js";
 import { setButtonLoading } from "../loading.js";
+import { emptyStateHTML } from "../empty-state.js";
+
+const LOAD_ERROR = {
+    icon: "⚠️",
+    title: "Could not load data",
+    message: "The server did not respond. This panel will retry automatically.",
+    variant: "error"
+};
+
+function emptyRow(state) {
+    return `<tr><td colspan="4">${state}</td></tr>`;
+}
 
 function renderRecentActivity(logs) {
     const tbody = $("recentActivityBody");
     if (!tbody) return;
 
+    if (logs === null) {
+        tbody.innerHTML = emptyRow(emptyStateHTML(LOAD_ERROR));
+        return;
+    }
+
     const recent = logs.slice(0, 8);
 
     if (!recent.length) {
-        tbody.innerHTML =
-            '<tr><td colspan="4" class="empty-state">No visitor activity yet.</td></tr>';
+        tbody.innerHTML = emptyRow(emptyStateHTML({
+            icon: "📖",
+            title: "No visitor activity yet",
+            message: "Recognition events will appear here once the camera identifies visitors."
+        }));
         return;
     }
 
@@ -23,12 +43,20 @@ function renderPendingSummary(approvals) {
     const list = $("pendingSummaryList");
     if (!list) return;
 
+    if (approvals === null) {
+        list.innerHTML = emptyStateHTML(LOAD_ERROR);
+        return;
+    }
+
     setText("pendingVisitors", approvals.length);
     setText("pendingSummaryBadge", approvals.length + " Pending");
 
     if (!approvals.length) {
-        list.innerHTML =
-            '<div class="empty-state">No pending approvals.</div>';
+        list.innerHTML = emptyStateHTML({
+            icon: "🕐",
+            title: "No pending approvals",
+            message: "New visitor requests will appear here for host review."
+        });
         return;
     }
 
@@ -52,11 +80,19 @@ function renderInsideSummary(visitors) {
     const list = $("insideSummaryList");
     if (!list) return;
 
+    if (visitors === null) {
+        list.innerHTML = emptyStateHTML(LOAD_ERROR);
+        return;
+    }
+
     setText("insideSummaryBadge", visitors.length + " Visitors");
 
     if (!visitors.length) {
-        list.innerHTML =
-            '<div class="empty-state">No visitors currently inside.</div>';
+        list.innerHTML = emptyStateHTML({
+            icon: "🏢",
+            title: "No visitors currently inside",
+            message: "When an approved visitor is marked as entered, they will appear here."
+        });
         return;
     }
 

@@ -3,14 +3,161 @@
 {% block title %}Visitor History · AI Visitor Security System{% endblock %}
 
 {% block page_title %}Visitor History{% endblock %}
-{% block page_subtitle %}Recognition events recorded by the face-recognition program{% endblock %}
+{% block page_subtitle %}Registered visitors and recognition events recorded by the system{% endblock %}
 
 {% block content %}
 
 <section class="panel table-panel">
     <div class="panel-heading">
         <div>
-            <h3>Visitor Recognition Logs</h3>
+            <h3>Visitor Records</h3>
+            <p>Every registered visitor with approval status, newest first</p>
+        </div>
+        <span class="badge badge-green" id="historyCountBadge">
+            {{ registrations|default([])|length }} Total
+        </span>
+    </div>
+
+    <div class="records-toolbar">
+        <input class="search-input" type="search" id="historySearch"
+            placeholder="Search name, phone, email, host, purpose...">
+
+        <div class="filter-field">
+            <label for="historyApprovalFilter">Approval Status</label>
+            <select id="historyApprovalFilter">
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="historyDepartmentFilter">Department</label>
+            <select id="historyDepartmentFilter">
+                <option value="all">All Departments</option>
+                {% for department in departments %}
+                <option value="{{ department }}">{{ department }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="historyInsideFilter">Visit Status</label>
+            <select id="historyInsideFilter">
+                <option value="all">All Visitors</option>
+                <option value="inside">Currently Inside</option>
+                <option value="outside">Not Currently Inside</option>
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label for="historyStartDate">From</label>
+            <input type="date" id="historyStartDate">
+        </div>
+
+        <div class="filter-field">
+            <label for="historyEndDate">To</label>
+            <input type="date" id="historyEndDate">
+        </div>
+
+        <button class="button button-secondary" id="clearHistoryButton">
+            Clear Filters
+        </button>
+    </div>
+
+    <div class="date-error" id="historyDateError" role="alert"></div>
+
+    <div class="records-summary">
+        <span id="historySummary">
+            Showing {{ registrations|default([])|length }} of
+            {{ registrations|default([])|length }} records
+        </span>
+        <span class="table-subtext">
+            Dates filter on the registration time
+        </span>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Visitor</th>
+                    <th>Contact</th>
+                    <th>Host</th>
+                    <th>Department</th>
+                    <th>Purpose</th>
+                    <th>Registered At</th>
+                    <th>Approval Status</th>
+                    <th>Inside</th>
+                </tr>
+            </thead>
+            <tbody id="historyTableBody">
+                {% if registrations %}
+                {% for visitor in registrations %}
+                <tr>
+                    <td>
+                        <strong>{{ visitor.get('Name', '') }}</strong><br>
+                        <span class="table-subtext">
+                            {{ visitor.get('Registration ID', '') }}
+                        </span>
+                    </td>
+                    <td>
+                        {{ visitor.get('Phone', 'Not provided') }}<br>
+                        <span class="table-subtext">
+                            {{ visitor.get('Email', 'Not provided') }}
+                        </span>
+                    </td>
+                    <td>{{ visitor.get('Host', 'Not provided') }}</td>
+                    <td>{{ visitor.get('Department', 'Not provided') }}</td>
+                    <td>{{ visitor.get('Purpose', 'Not provided') }}</td>
+                    <td>{{ visitor.get('Registration Time', 'Not available') }}</td>
+                    <td>
+                        {% set status = visitor.get('Approval Status', 'Pending') %}
+                        {% set status_class =
+                            'badge-green' if status == 'Approved'
+                            else ('badge-red' if status == 'Rejected'
+                            else 'badge-orange') %}
+                        <span class="badge {{ status_class }}">{{ status }}</span>
+                    </td>
+                    <td>
+                        {% if visitor.get('Name', '') in inside_names %}
+                        <span class="badge badge-green">Inside</span>
+                        {% else %}
+                        <span class="badge badge-gray">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <div class="empty-icon" aria-hidden="true">📝</div>
+                            <h4>No visitor registrations yet</h4>
+                            <p>Registered visitors and their approval status will appear here.</p>
+                            <a class="button button-secondary small-button"
+                                href="{{ url_for('registration_page') }}">
+                                Register a Visitor
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="notice">
+        Records cover every visitor registration, including pending and rejected requests.
+        Recognition events from the live camera feed are listed below.
+    </div>
+</section>
+
+<section class="panel table-panel">
+    <div class="panel-heading">
+        <div>
+            <h3>Recognition Events</h3>
             <p>Every recognized and unknown face event, newest first</p>
         </div>
 
@@ -50,7 +197,13 @@
                 {% endfor %}
                 {% else %}
                 <tr>
-                    <td colspan="4" class="empty-state">No visitor logs available.</td>
+                    <td colspan="4">
+                        <div class="empty-state">
+                            <div class="empty-icon" aria-hidden="true">📖</div>
+                            <h4>No visitor logs available</h4>
+                            <p>Recognition events will be recorded here once the camera identifies visitors.</p>
+                        </div>
+                    </td>
                 </tr>
                 {% endif %}
             </tbody>

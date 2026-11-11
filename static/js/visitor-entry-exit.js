@@ -2,6 +2,7 @@ import { $, fetchJSON, escapeHTML, setText } from "./utils.js";
 import { confirmDialog } from "./modal.js";
 import { toast } from "./toast.js";
 import { setButtonLoading } from "./loading.js";
+import { emptyStateHTML } from "./empty-state.js";
 
 export async function loadInsideVisitors() {
     try {
@@ -17,8 +18,11 @@ export async function loadInsideVisitors() {
         if (!list) return visitors;
 
         if (!visitors.length) {
-            list.innerHTML =
-                '<div class="empty-state">No open entry records.</div>';
+            list.innerHTML = emptyStateHTML({
+                icon: "🏢",
+                title: "No visitors currently inside",
+                message: "When an approved visitor is marked as entered, they will appear here."
+            });
             return visitors;
         }
 
@@ -45,12 +49,17 @@ export async function loadInsideVisitors() {
 
         return visitors;
     } catch (error) {
+        console.error("Could not load open visitors:", error);
         const list = $("insideList");
         if (list) {
-            list.innerHTML =
-                '<div class="empty-state">Could not load open visitor records.</div>';
+            list.innerHTML = emptyStateHTML({
+                icon: "⚠️",
+                title: "Could not load inside visitors",
+                message: "The server did not respond. The list will retry automatically.",
+                variant: "error"
+            });
         }
-        return [];
+        return null;
     }
 }
 
@@ -71,8 +80,12 @@ export async function loadApprovedVisitors() {
         if (!list) return approved;
 
         if (!approved.length) {
-            list.innerHTML =
-                '<div class="empty-state">No approved visitors waiting for entry.</div>';
+            list.innerHTML = emptyStateHTML({
+                icon: "👥",
+                title: "No approved visitors",
+                message: "Visitors approved by their host will appear here, ready to be marked as entered.",
+                action: { label: "Review Approvals", href: "/approvals" }
+            });
             return approved;
         }
 
@@ -106,10 +119,14 @@ export async function loadApprovedVisitors() {
         console.error("Could not load approved visitors:", error);
         const list = $("approvedList");
         if (list) {
-            list.innerHTML =
-                '<div class="empty-state">Could not load approved visitors.</div>';
+            list.innerHTML = emptyStateHTML({
+                icon: "⚠️",
+                title: "Could not load approved visitors",
+                message: "The server did not respond. The list will retry automatically.",
+                variant: "error"
+            });
         }
-        return [];
+        return null;
     }
 }
 

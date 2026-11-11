@@ -115,7 +115,13 @@
                         {% endfor %}
                         {% else %}
                         <tr>
-                            <td colspan="4" class="empty-state">No visitor logs available.</td>
+                            <td colspan="4">
+                                <div class="empty-state">
+                                    <div class="empty-icon" aria-hidden="true">📖</div>
+                                    <h4>No visitor activity yet</h4>
+                                    <p>Recognition events will appear here once the camera identifies visitors.</p>
+                                </div>
+                            </td>
                         </tr>
                         {% endif %}
                     </tbody>

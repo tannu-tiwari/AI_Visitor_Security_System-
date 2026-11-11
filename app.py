@@ -132,10 +132,25 @@ def inside_visitors_page():
 @app.route("/visitor-history")
 def visitor_history_page():
     logs = get_visitor_logs()
+    registrations = load_registrations()
+
+    departments = sorted({
+        str(record.get("Department", "")).strip()
+        for record in registrations
+        if str(record.get("Department", "")).strip()
+    })
+    inside_names = {
+        visitor.get("Visitor Name") or visitor.get("Name") or
+        visitor.get("name") or ""
+        for visitor in get_open_visitors()
+    }
 
     return render_template(
         "visitor_history.html",
-        logs=logs[::-1]
+        logs=logs[::-1],
+        registrations=registrations[::-1],
+        departments=departments,
+        inside_names=inside_names
     )
 
 

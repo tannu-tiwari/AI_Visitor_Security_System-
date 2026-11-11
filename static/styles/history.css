@@ -1,0 +1,85 @@
+/* Visitor Records panel on the Visitor History page:
+   search + filter toolbar, result summary and helper table text. */
+
+.records-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.records-toolbar .search-input {
+    flex: 1 1 220px;
+    max-width: 320px;
+}
+
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-field label {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+}
+
+.filter-field select,
+.filter-field input[type="date"] {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    outline: none;
+    font-size: 12.5px;
+    background: #fff;
+    color: var(--text);
+}
+
+.filter-field select,
+.filter-field input[type="date"] {
+    min-width: 150px;
+}
+
+.records-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 12px 0;
+    font-size: 12.5px;
+    color: var(--muted);
+}
+
+.date-error {
+    color: var(--red);
+    font-size: 12px;
+    margin-top: 6px;
+    min-height: 15px;
+}
+
+/* Secondary text inside table cells (registration ID under the name). */
+.table-subtext {
+    font-size: 11px;
+    color: var(--muted);
+}
+
+@media (max-width: 750px) {
+    .records-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .records-toolbar .search-input {
+        max-width: none;
+    }
+
+    .filter-field select,
+    .filter-field input[type="date"] {
+        min-width: 0;
+        width: 100%;
+    }
+}

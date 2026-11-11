@@ -17,7 +17,13 @@ approval, and tracks who is currently inside through a security dashboard.
 - Custom modal dialogs for approvals and entry/exit confirmations (no native
   browser popups).
 - Toast notifications and loading indicators for all actions.
+- Consistent empty states (with useful actions) that are visually distinct from
+  loading and error states.
 - Searchable recognition logs.
+- Visitor History records panel: search registrations by name, phone, email,
+  registration ID, host, department or purpose, filter by approval status,
+  department and whether the visitor is currently inside, and restrict by a
+  From/To date range on the registration time.
 - JSON API endpoints consumed by the pages (auto-refresh every 10s).
 
 ## Tech Stack
@@ -134,9 +140,11 @@ simply skipped.
 4. **Mark exit** — visitors currently inside appear on the same page; click
    "Mark Exit" and confirm to close their entry record.
 5. **Monitor** — the *Dashboard* page shows live statistics, recent activity
-   and pending approvals; the *Visitor History* page lists all recognition
-   events with search. The *Face Recognition* page shows the live feed and the
-   latest recognition results.
+   and pending approvals; the *Face Recognition* page shows the live feed and
+   the latest recognition results.
+6. **Review history** — the *Visitor History* page lists every registration
+   (searchable and filterable, including date ranges) plus all recognition
+   events with their own search.
 
 ## Project Structure
 
@@ -159,12 +167,13 @@ templates/                    Jinja templates (page markup)
     recognition.html          Live camera feed + recognition status
     approvals.html            Pending host approvals (approve / reject)
     inside_visitors.html      Entry and exit management
-    visitor_history.html      Recognition logs with search
+    visitor_history.html      Visitor records (search/filters/dates) + recognition logs
 static/styles/                Dashboard CSS, split by component
 static/js/                    Shared JavaScript modules (utils, camera,
                              photo capture, registration, logs, approvals,
                              entry/exit, status pill, modal dialogs,
-                             toast notifications, loading indicators)
+                             toast notifications, loading indicators,
+                             empty states, visitor records)
 static/js/pages/             One entry module per page
 data/                         Runtime data files
     visitor_registrations.json  Visitor registrations + approval status

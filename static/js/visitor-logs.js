@@ -1,5 +1,6 @@
 import { $, escapeHTML, fetchJSON, setText } from "./utils.js";
 import { setButtonLoading } from "./loading.js";
+import { emptyStateHTML } from "./empty-state.js";
 
 let allLogs = [];
 
@@ -21,6 +22,10 @@ export function logRowHTML(log) {
     `;
 }
 
+function emptyRow(state) {
+    return `<tr><td colspan="4">${state}</td></tr>`;
+}
+
 function renderLogs(logs) {
     const search = $("logSearch");
     const query = search ? search.value.trim().toLowerCase() : "";
@@ -35,8 +40,21 @@ function renderLogs(logs) {
     if (!tbody) return;
 
     if (!filtered.length) {
-        tbody.innerHTML =
-            '<tr><td colspan="4" class="empty-state">No matching visitor logs.</td></tr>';
+        // Distinguish "search matched nothing" from "no data at all".
+        tbody.innerHTML = emptyRow(
+            query
+                ? emptyStateHTML({
+                    icon: "🔍",
+                    title: "No matching visitor logs",
+                    message: "No logs match \"" + search.value.trim() + "\".",
+                    action: { label: "Clear Search", id: "clearLogSearch" }
+                })
+                : emptyStateHTML({
+                    icon: "📖",
+                    title: "No visitor logs yet",
+                    message: "Recognition events will be recorded here once the camera identifies visitors."
+                })
+        );
         return;
     }
 
@@ -66,6 +84,22 @@ export async function loadLogs() {
         return allLogs;
     } catch (error) {
         console.error("Could not load visitor logs:", error);
+
+        // Keep showing the last known data if we have it; otherwise show
+        // an explicit error state instead of a misleading "no logs" state.
+        if (!allLogs.length) {
+            const tbody = $("logsTableBody");
+            if (tbody) {
+                tbody.innerHTML = emptyRow(emptyStateHTML({
+                    icon: "⚠️",
+                    title: "Could not load visitor logs",
+                    message: "The server did not respond. The table will retry automatically.",
+                    variant: "error"
+                }));
+            }
+            return null;
+        }
+
         return allLogs;
     }
 }
@@ -76,6 +110,17 @@ export function initVisitorLogs() {
 
     if (search) {
         search.addEventListener("input", () => renderLogs(allLogs));
+    }
+
+    const tbody = $("logsTableBody");
+    if (tbody) {
+        tbody.addEventListener("click", event => {
+            if (event.target.id === "clearLogSearch" && search) {
+                search.value = "";
+                renderLogs(allLogs);
+                search.focus();
+            }
+        });
     }
 
     if (refreshButton) {

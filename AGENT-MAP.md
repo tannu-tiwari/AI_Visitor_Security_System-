@@ -2,9 +2,9 @@
 
 > Read this first at the start of any session. It describes what the project is,
 > where everything lives, how the pieces connect, and what is likely still to do.
-> Last updated: 2026-11-11 (reusable modal dialogs, toast notifications and
-> loading indicators on top of the multi-page split, root-folder restructure and
-> JS/CSS extraction).
+> Last updated: 2026-11-11 (consistent empty/error states across all lists,
+> Visitor History search + filters + date range, on top of the multi-page split,
+> root-folder restructure, modal/toast/loading UI system and JS/CSS extraction).
 
 ## 1. What this project is
 
@@ -91,8 +91,8 @@ Browser ──► /api/visitor-logs, /api/open-visitors, /api/registrations,
 | `templates/recognition.html` | Live `/video_feed` stream, camera badge + Check/Restart/Retry controls, recent recognition events. |
 | `templates/approvals.html` | Pending approvals with photos + approve/reject (modal dialog asks for the host's name; rejections also require a reason). |
 | `templates/inside_visitors.html` | Approved Visitors (Mark Entry) + Currently Inside (Mark Exit), each behind a confirmation modal. |
-| `templates/visitor_history.html` | Full recognition logs table + client-side search. |
-| `static/styles/*.css` | Dashboard CSS split by component (base, layout, **sidebar**, topbar, buttons, badges, stats, panels, forms, camera, tables, **loading**, **modal**, **toast**). |
+| `templates/visitor_history.html` | **Visitor Records panel** (all registrations, client-side search/filters/date range) + **Recognition Events panel** (full logs table + client-side search). |
+| `static/styles/*.css` | Dashboard CSS split by component (base, layout, **sidebar**, topbar, buttons, badges, stats, panels, forms, camera, tables, **history**, **loading**, **modal**, **toast**). |
 | `static/js/*.js` | Shared feature modules (see §7). |
 | `static/js/pages/*.js` | Per-page entry modules (dashboard, registration, recognition, approvals, inside-visitors, visitor-history). |
 
@@ -123,7 +123,7 @@ feedback goes through toasts (registration keeps its inline feedback panel).
 | GET | `/recognition` | `recognition_page` | Live recognition feed page. |
 | GET | `/approvals` | `approvals_page` | Host approvals page. |
 | GET | `/inside-visitors` | `inside_visitors_page` | Entry/exit management page. |
-| GET | `/visitor-history` | `visitor_history_page` | Recognition logs page (server-rendered rows + JS search). |
+| GET | `/visitor-history` | `visitor_history_page` | Visitor Records (server-rendered registrations, searched/filtered client-side) + recognition logs (server-rendered rows + JS search). |
 | GET | `/health` | `health_check` | JSON liveness. |
 | GET | `/api/visitor-logs` | `visitor_logs_api` | Stats + reversed logs. |
 | GET | `/api/open-visitors` | `open_visitors_api` | Visitors currently `Inside`. |
@@ -151,11 +151,13 @@ one feature module can serve several pages.
 | `modal.js` | approvals, inside-visitors | Reusable dialogs: `confirmDialog({...})` → `Promise<boolean>`, `formDialog({fields})` → `Promise<values\|null>`. One shared dialog element; focus trap + Tab wrap, Escape/backdrop/×/Cancel dismissal (blocked while `onConfirm` is in flight), inline field validation with trimming, restores focus on close. Cancel resolves `false`/`null` and never calls `onConfirm`; `onConfirm` throwing closes the dialog and rejects so callers can toast the failure. |
 | `toast.js` | all pages that act | `toast.success/error/warning/info(message)` — stacked, auto-dismissing (errors last longer), manually closable, capped at 5 visible, messages set via `textContent`. |
 | `loading.js` | all | `setButtonLoading(button, busy, label)` — disables the button, adds a spinner + `aria-busy`, stores/restores the original label. |
+| `empty-state.js` | all list/table pages | `emptyStateHTML({icon, title, message, action, variant})` — shared empty/error markup. Action is a link (`href`) or a delegated button (`id`); `variant: "error"` styles request failures differently from genuinely empty data. All strings escaped. |
 | `status-pill.js` | base (all pages) | One `/camera-status` fetch → header pill. |
 | `camera-feed.js` | recognition | `checkCamera` (pill + panel badge), retry/restart feed buttons. |
 | `photo-capture.js` | registration | `captureVisitorPhoto` (canvas ← feed `<img>` → `/save-capture`), `retakeVisitorPhoto`, reveals the form; busy capture button, toast on failure. |
 | `visitor-registration.js` | registration | Form submit → `/register-visitor`; photo-first gating; submit button busy state; inline feedback panel; pending-list refresh only if present. |
-| `visitor-logs.js` | history, dashboard, recognition | `loadLogs` (updates stat cards when present, returns logs), `logRowHTML`, search + refresh (refresh button busy while fetching). |
+| `visitor-logs.js` | history, dashboard, recognition | `loadLogs` (updates stat cards when present, returns logs; returns `null` if the request fails and no stale data exists), `logRowHTML`, search + refresh (refresh button busy while fetching). Search has three distinct states: matching rows, "no match" (with a clear-search action) and "no logs yet"; failures keep stale rows or show an error state. |
+| `visitor-records.js` | history | Visitor Records table: `loadVisitorHistory` fetches `/api/registrations` + `/api/open-visitors` (for the Inside badge), renders newest-first; `initVisitorHistory` wires the debounced search (name/phone/email/registration ID/host/department/purpose), approval-status, department, visit-status and date-range filters, plus "Clear Filters". Filtering is client-side (small dataset already returned by the API). Invalid date ranges show an inline error and skip only the date part. |
 | `visitor-approval.js` | approvals, dashboard | `loadApprovals` (returns list, updates badge when present); delegated approve/reject opens a `formDialog` (host name, required; + reason when rejecting) that POSTs the unchanged payload; success/failure toasts; row button disabled during the flow. |
 | `visitor-entry-exit.js` | inside-visitors, dashboard | `loadInsideVisitors` / `loadApprovedVisitors` (return data, update badges/stats when present); delegated Mark Entry / Mark Exit open a `confirmDialog` identifying the visitor (host/purpose/entry time) before posting; toasts + list refresh on success, row button disabled during the flow. |
 | `pages/dashboard.js` | `/` | Refresh button (busy while refreshing) + 10s polling: logs, pending, inside → stat cards + read-only summaries. |
@@ -163,7 +165,7 @@ one feature module can serve several pages.
 | `pages/recognition.js` | `/recognition` | `initCameraFeed` + `checkCamera` + 10s recent-events polling. |
 | `pages/approvals.js` | `/approvals` | `initVisitorApproval` + 10s pending polling. |
 | `pages/inside-visitors.js` | `/inside-visitors` | `initVisitorEntryExit` + 10s polling of both lists. |
-| `pages/visitor-history.js` | `/visitor-history` | `initVisitorLogs` + `loadLogs` + 10s polling. |
+| `pages/visitor-history.js` | `/visitor-history` | `initVisitorLogs` + `initVisitorHistory` + `loadLogs` + `loadVisitorHistory` + 10s polling of both panels. |
 
 Camera feed: `<img src="/video_feed">` appears only on `/registration` and
 `/recognition`. Approve/reject and entry/exit run through `modal.js` (see
@@ -178,6 +180,8 @@ above); their POST payloads and endpoints are unchanged.
 - `log_interval` throttle key is `name_status`, so frequent unknown events are throttled per status, not globally.
 - CSV has **mixed date formats** historically (`DD-MM-YYYY` legacy rows vs `YYYY-MM-DD` new rows) and one junk row `{0: 'Vandana'}` — see `data/visitor_logs.csv`.
 - First 3 rows of `data/visitor_registrations.json` lack the `Photo Filename` key (added later feature); frontend tolerates missing keys.
+- `data/visitor_tracking.json` records use the key **`Visitor Name`** (not `Name`). `app.py` joins open visitors to registrations by that key for the server-rendered Inside badge; `visitor-records.js` prefers `Name` but falls back through `name`/`Visitor Name`.
+- Registration timestamps are stored as `"YYYY-MM-DD HH:MM:SS"`; the history date filter compares the first 10 characters against `<input type="date">` values (inclusive ISO string comparison). Rows without a parseable timestamp are excluded only while a date filter is active.
 - `register_visitor` requires `name, phone, purpose, host, department`; `email` optional.
 - `scripts/face_capture.py` and `scripts/face_detection.py` open their own `cv2.VideoCapture(0)` — do not run them while `app.py` streams the same camera.
 - Emails only send when `.env` has `SMTP_USER` + `SMTP_PASSWORD` (`is_email_configured()`); `core/email_sender.py` never raises — failures are logged and the API still succeeds with `email_sent: false`.
@@ -204,6 +208,15 @@ Completed in recent refactors (uncommitted, see §10):
       indicators (`loading.js` + `loading.css`) for actions and refreshes.
 - [x] Add confirmation dialogs to Mark Entry / Mark Exit identifying the
       visitor before any request is sent.
+- [x] Consistent empty/error states everywhere (`empty-state.js`): approval
+      cards, both inside-visitor lists, dashboard summaries + recent activity,
+      both history tables and recent recognition events — each distinct from
+      loading spinners, with actions where useful (register / review approvals /
+      clear search / clear filters).
+- [x] Visitor History now has a Visitor Records panel: search over name, phone,
+      email, registration ID, host, department and purpose; approval-status,
+      department and visit-status (inside/outside) filters; From/To date range
+      on Registration Time; result count; clear-filters; client-side filtering.
 
 Still open:
 
@@ -211,9 +224,9 @@ Still open:
 - [ ] Clean `data/visitor_logs.csv` date formats + stray `{0: 'Vandana'}` row.
 - [ ] Add tests / basic validation; consider a database instead of flat files.
 - [ ] Add authentication for the dashboard and host-approval endpoints.
-- [ ] Optionally expose past entry/exit records (Exited visits) for the history
-      page — currently only recognition logs are shown (user declined the extra
-      endpoint for now).
+- [ ] Optionally expose past entry/exit records (Exited visits) in the history
+      page — currently the records panel covers registrations, the logs panel
+      covers recognition events, but full entry/exit history is not listed.
 
 ## 10. Git state
 
@@ -222,7 +235,9 @@ Still open:
   `core/`/`scripts/`/`data/`, JS/CSS extraction, approval-workflow and
   email-template improvements, the multi-page split (`base.html` + 6 page
   templates + `static/js/pages/`), the modal/toast/loading UI system, the
-  two-column approval cards, `.gitignore`/README/AGENT-MAP updates.
+  two-column approval cards, consistent empty/error states (`empty-state.js`),
+  the Visitor History records panel (`visitor-records.js` + `history.css`),
+  `.gitignore`/README/AGENT-MAP updates.
 - Tracked junk (`server_*.log`, `server_test.pid`, `visitor_registrations.json.testbak`,
   `__pycache__/` incl. a stray `__pycache__/templates/dashboard.html`) has been
   deleted from the working tree; `.gitignore` now prevents them from returning.

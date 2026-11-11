@@ -3,6 +3,7 @@ import { loadApprovedVisitors } from "./visitor-entry-exit.js";
 import { formDialog } from "./modal.js";
 import { toast } from "./toast.js";
 import { setButtonLoading } from "./loading.js";
+import { emptyStateHTML } from "./empty-state.js";
 
 export async function loadApprovals() {
     try {
@@ -17,8 +18,12 @@ export async function loadApprovals() {
         if (!list) return approvals;
 
         if (!approvals.length) {
-            list.innerHTML =
-                '<div class="empty-state">No pending approvals.</div>';
+            list.innerHTML = emptyStateHTML({
+                icon: "🕐",
+                title: "No pending approvals",
+                message: "New visitor requests will appear here for host review.",
+                action: { label: "Register a Visitor", href: "/registration" }
+            });
             return approvals;
         }
 
@@ -90,10 +95,14 @@ export async function loadApprovals() {
         console.error("Approval loading error:", error);
         const list = $("approvalList");
         if (list) {
-            list.innerHTML =
-                '<div class="empty-state">Could not load host approvals.</div>';
+            list.innerHTML = emptyStateHTML({
+                icon: "⚠️",
+                title: "Could not load approvals",
+                message: "The server did not respond. The list will retry automatically.",
+                variant: "error"
+            });
         }
-        return [];
+        return null;
     }
 }
 
