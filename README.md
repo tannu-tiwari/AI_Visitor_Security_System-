@@ -39,8 +39,8 @@ approval, and tracks who is currently inside through a security dashboard.
 - Flask
 - OpenCV (`opencv-contrib-python`, for `cv2.face`)
 - NumPy
+- Flask-SQLAlchemy + SQLite (local database storage)
 - python-dotenv (SMTP email settings)
-- Plain CSV/JSON files for storage (no database)
 
 ## Prerequisites
 
@@ -75,6 +75,46 @@ approval, and tracks who is currently inside through a security dashboard.
 
    > `opencv-contrib-python` is required (not plain `opencv-python`) because the
    > project uses `cv2.face.LBPHFaceRecognizer_create()`.
+
+## Database
+
+Visitor registrations, approval decisions, entry/exit visits and recognition
+events are stored in a local SQLite database at `data/visitor_management.db`.
+The tables are created automatically when the app starts, so no manual setup is
+needed.
+
+To use a different database file (for example for testing), set the
+`VISITOR_DB_PATH` environment variable before starting the app:
+
+```powershell
+$env:VISITOR_DB_PATH = "C:\path\to\visitor.db"
+python app.py
+```
+
+```bash
+VISITOR_DB_PATH=/path/to/visitor.db python app.py
+```
+
+### Migrating existing CSV/JSON data
+
+If you have data from an earlier version of the project, import it once:
+
+```bash
+python scripts/migrate_to_sqlite.py
+```
+
+The script:
+
+- copies `data/visitor_registrations.json`, `data/visitor_tracking.json` and
+  `data/visitor_logs.csv` into `backups/migration_<timestamp>/`;
+- imports every record into the SQLite database;
+- writes a `migration_report.json` with migrated/skipped/failed counts;
+- never modifies or deletes the original files.
+
+It is safe to run again: records already in the database are skipped and no
+duplicates are created. Optional flags are `--database`, `--source-dir` and
+`--backup-dir`. After migrating, the app no longer reads or writes the legacy
+CSV/JSON files.
 
 ## Preparing Face Data (one-time / when adding people)
 
@@ -161,6 +201,8 @@ simply skipped.
 ```
 app.py                        Main Flask application and all routes
 core/                         Backend modules used by app.py
+    database.py               SQLite/SQLAlchemy setup and app-context helper
+    models.py                 Visitor, Approval, Visit, RecognitionEvent models
     email_sender.py           Registration / decision emails (SMTP)
     face_recognition.py       Live recognition + MJPEG streaming module
     host_approval.py          Host approval logic
@@ -170,6 +212,7 @@ scripts/                      Standalone utilities (run from the project root)
     face_capture.py           Script to capture training face images
     train_model.py            Trains the LBPH model from dataset/
     face_detection.py         Standalone face-detection demo (not used by app)
+    migrate_to_sqlite.py      One-time JSON/CSV -> SQLite importer (idempotent)
 templates/                    Jinja templates (page markup)
     base.html                 Shared layout: sidebar navigation + header
     dashboard.html            Overview page (stats, recent activity, summaries)
@@ -186,10 +229,11 @@ static/js/                    Shared JavaScript modules (utils, camera,
                              dialogs, toast notifications, loading indicators,
                              empty states, visitor records, pagination)
 static/js/pages/             One entry module per page
-data/                         Runtime data files
-    visitor_registrations.json  Visitor registrations + approval status
-    visitor_logs.csv            Recognition event log
-    visitor_tracking.json       Entry/exit records
+data/                         Runtime data
+    visitor_management.db       SQLite database (auto-created, gitignored)
+    visitor_registrations.json  Legacy registrations (migrated, kept on disk)
+    visitor_logs.csv            Legacy recognition log (migrated, kept on disk)
+    visitor_tracking.json       Legacy entry/exit records (migrated, kept on disk)
 dataset/                      Training images per person
 model/                        Trained LBPH model, label names + Haar cascade
 visitor_captures/             Photos captured from the browser
@@ -237,6 +281,9 @@ AGENT-MAP.md                  Developer minimap of the project
   intended.
 - The recognition confidence is a distance: lower is better. Anything below
   `50` is treated as a match.
-- Approval history is derived from the stored `Approval Status` of each
-  registration. Earlier approvals made before decision details were captured
-  show "Not recorded" — the app never fabricates a decision maker or time.
+- Approval history is stored in the database. Earlier approvals made before
+  decision details were captured have no decision maker or time and show "Not
+  recorded" — the app never fabricates values.
+- Back up `data/visitor_management.db` to keep a copy of all visitor records.
+  The legacy JSON/CSV files are only a pre-migration snapshot; the app does not
+  keep them in sync any more.

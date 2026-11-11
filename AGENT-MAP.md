@@ -2,11 +2,12 @@
 
 > Read this first at the start of any session. It describes what the project is,
 > where everything lives, how the pieces connect, and what is likely still to do.
-> Last updated: 2026-11-11 (Approval History page + reusable client-side
-> pagination across records, events, approvals and inside lists, on top of the
-> empty/error-state system, Visitor History search/filters/date range, the
-> multi-page split, root-folder restructure, modal/toast/loading UI system and
-> JS/CSS extraction).
+> Last updated: 2026-11-11 (SQLite migration: Flask-SQLAlchemy models +
+> database module, idempotent JSON/CSV importer with backups, all routes and
+> core modules rewired to the database with unchanged API shapes; on top of the
+> Approval History page, pagination, empty/error states, Visitor History
+> search/filters, the multi-page split, root-folder restructure and
+> modal/toast/loading UI system).
 
 ## 1. What this project is
 
@@ -28,7 +29,7 @@ This is a college (Synergy) project. Repo: `github.com/tannu-tiwari/AI_Visitor_S
 - **Vision:** OpenCV (`opencv-contrib-python` 4.10) — Haar cascade detection + LBPH face recognizer; NumPy.
 - **Frontend:** Jinja template inheritance (`base.html` + 7 page templates), vanilla ES modules loaded per page, no build step, no framework.
 - **Email:** `python-dotenv` + `smtplib` — SMTP settings come from `.env` in the project root.
-- **Storage:** plain CSV + JSON files in `data/` (no database). Images as JPEG files.
+- **Storage:** SQLite via Flask-SQLAlchemy (`data/visitor_management.db`, override with `VISITOR_DB_PATH`). Legacy CSV/JSON files are kept on disk but no longer read/written. Images as JPEG files.
 
 `requirements.txt`, `README.md`, `.gitignore`, and `.env.example` exist. There is
 still no test suite and no `AGENTS.md`.
@@ -55,14 +56,14 @@ python app.py            # http://127.0.0.1:5000
 ```
 Webcam ──► core/face_recognition.generate_frames()  ──► MJPEG at /video_feed ──► dashboard <img>
                       │
-                      └── log_visitor(name,status) ──► data/visitor_logs.csv
+                      └── log_visitor(name,status) ──► SQLite recognition_events
 
 Browser ──► /save-capture  ──► visitor_captures/visitor_<timestamp>.jpg
 Browser ──► /visitor-captures/<filename>  ──► serve saved photo (JPEG/PNG only)
-Browser ──► /register-visitor ──► core/visitor_registration.register_visitor() ──► data/visitor_registrations.json (Pending)
-Browser ──► /host-approval/<id>/<decision> ──► core/host_approval.update_approval() ──► status Approved/Rejected
+Browser ──► /register-visitor ──► core/visitor_registration.register_visitor() ──► SQLite visitors (Pending)
+Browser ──► /host-approval/<id>/<decision> ──► core/host_approval.update_approval() ──► visitors + approvals
              (decision emails via core/email_sender.py, never raise)
-Browser ──► /mark-entry, /mark-exit ──► core/visitor_logs.mark_entry/mark_exit ──► data/visitor_tracking.json
+Browser ──► /mark-entry, /mark-exit ──► core/visitor_logs.mark_entry/mark_exit ──► SQLite visits
 Browser ──► /api/visitor-logs, /api/open-visitors, /api/registrations,
              /api/pending-approvals, /api/approval-history, /camera-status
              (JSON polling every 10s)
@@ -74,15 +75,18 @@ Browser ──► /api/visitor-logs, /api/open-visitors, /api/registrations,
 
 | File | Role |
 |------|------|
-| `app.py` | **Main Flask app** (root). All routes, stats helpers, image upload, run config. Imports the `core/` modules below. |
+| `app.py` | **Main Flask app** (root). All routes, stats helpers, image upload, run config. Calls `init_database(app)` at startup and reads logs from the database. |
 | `core/face_recognition.py` | **Live recognition module**. Loads LBPH model + Haar cascade once (`initialize_recognition`), opens webcam once (`get_camera`), yields annotated MJPEG frames (`generate_frames`), `camera_available()`, `release_camera()`. Threshold `CONFIDENCE_THRESHOLD=50`, per-person logging throttle `LOG_INTERVAL=30s`. |
-| `core/visitor_logs.py` | Log/tracking logic: `log_visitor` (append to CSV), `mark_entry`/`mark_exit` (tracking JSON), `get_open_visitors`, `load_visit_tracking`. Paths are `__file__`-based (CWD independent). |
-| `core/visitor_registration.py` | `register_visitor(...)` creates a registration with `Registration ID=VIS-<timestamp>` and `Approval Status=Pending`; `load_registrations`. Exports `REGISTRATION_FILE`. |
-| `core/host_approval.py` | `update_approval(registration_id, decision, decided_by, rejection_reason)` sets Approved/Rejected (only from Pending) and records `Decision By` / `Decision At` / `Rejection Reason`; `get_pending_approvals`; `get_approval_history` (derived Approved/Rejected records, newest decision first, legacy records returned as stored). |
+| `core/database.py` | `db = SQLAlchemy()`, `init_database(app)` (resolves `VISITOR_DB_PATH` or `data/visitor_management.db`, creates tables, enables SQLite FKs), `app_scope()` (pushes an app context for the camera streaming thread), `commit_session()`. |
+| `core/models.py` | `Visitor` (registration fields + status, unique `registration_id`), `Approval` (decision/maker/time/reason, legacy nulls allowed), `Visit` (nullable visitor link + name snapshot, entry/exit), `RecognitionEvent` (raw date/time strings). Legacy-shaped `to_dict()` serializers live here. |
+| `core/visitor_logs.py` | DB-backed log/tracking: `load_logs`, `log_visitor`, `mark_entry`/`mark_exit`, `get_open_visitors`, `load_visit_tracking`. Legacy file path constants kept for reference. |
+| `core/visitor_registration.py` | `register_visitor(...)` inserts a Visitor with `Registration ID=VIS-<timestamp>` and `Approval Status=Pending`; `load_registrations` orders by insertion. |
+| `core/host_approval.py` | `update_approval(...)` updates the visitor status and inserts an Approval row atomically (only from Pending); `get_pending_approvals`; `get_approval_history` (join, newest `coalesce(decision time, registration time)` first; legacy nulls not fabricated). |
 | `core/email_sender.py` | SMTP emails: `send_registration_email`, `send_decision_email` (never raise). Loads `.env` from the project root. |
 | `scripts/train_model.py` | Trains LBPH on `dataset/<person>/*.jpg`, saves `model/face_model.yml` + `model/label_names.npy`. Sorts names alphabetically → label IDs. |
 | `scripts/face_capture.py` | Interactive script: prompts for a name, captures 100 face crops into `dataset/<name>/`. |
 | `scripts/face_detection.py` | Standalone beginner demo: webcam window that draws boxes around faces (Hindi comments). Not used by the app. |
+| `scripts/migrate_to_sqlite.py` | Idempotent importer: backs up the legacy JSON/CSV into `backups/migration_<timestamp>/`, imports visitors/approvals/visits/recognition events per record, reports migrated/skipped/failed, never touches sources. Flags: `--source-dir`, `--database`, `--backup-dir`. |
 
 ### Templates and static assets
 
@@ -112,9 +116,10 @@ feedback goes through toasts (registration keeps its inline feedback panel).
 | `model/face_model.yml` | Trained LBPH model (~8 MB). |
 | `model/label_names.npy` | Label array. |
 | `model/haarcascade_frontalface_default.xml` | Haar frontal-face cascade used for detection. |
-| `data/visitor_logs.csv` | Recognition event log. Header: `Visitor Name,Date,Time,Status`. Status = `Recognized`/`Unknown`. |
-| `data/visitor_tracking.json` | Entry/exit records: `Visitor Name, Entry Date/Time, Exit Date/Time, Status` (`Inside`/`Exited`). |
-| `data/visitor_registrations.json` | Visitor registrations with approval status. |
+| `data/visitor_management.db` | **Live SQLite database** (auto-created, gitignored). Tables: `visitors`, `approvals`, `visits`, `recognition_events`. |
+| `data/visitor_logs.csv` | Legacy recognition log (migrated; no longer read/written). Header: `Visitor Name,Date,Time,Status`. |
+| `data/visitor_tracking.json` | Legacy entry/exit records (migrated; no longer read/written). |
+| `data/visitor_registrations.json` | Legacy registrations (migrated; no longer read/written). |
 | `visitor_captures/*.jpg` | Photos captured from the browser (`visitor_<timestamp>.jpg`). |
 | `backups/` | Legacy backup files (dead code, gitignored). |
 
@@ -184,20 +189,24 @@ above); their POST payloads and endpoints are unchanged.
 
 - **Confidence is a distance** — lower is better. `distance < 50` ⇒ recognized; display score is `100 - distance`.
 - **Label IDs come from sorted folder names** in `train_model.py`; if `label_names.npy` and model get out of sync, recognition names will be wrong. Retrain after adding/renaming dataset folders.
-- **`visitor_logs.py` uses relative paths** ~~(`"visitor_logs.csv"`, `"visitor_tracking.json"`)~~ — **fixed**: all module paths are now `__file__`-based and point into `data/`, so logging/tracking works from any CWD.
+- **Database:** SQLite file defaults to `data/visitor_management.db` (gitignored); set `VISITOR_DB_PATH` before startup to override. `init_database(app)` creates missing tables on every start and never drops data.
+- **Migration is idempotent:** `scripts/migrate_to_sqlite.py` skips visitors by unique `registration_id`, skips visits by `(visitor_name, entry_at)`, and compares natural-key counts for recognition events (duplicate CSV rows are preserved, not collapsed). Sources are copied to `backups/migration_<timestamp>/` and never modified.
+- **Concurrency:** SQLite connections use `check_same_thread=False` + a 30s busy timeout. Core modules run queries inside `app_scope()` because the MJPEG streaming generator can execute outside the request context.
+- **Foreign keys:** `PRAGMA foreign_keys=ON`; approvals cascade with a visitor, while `visits.visitor_id` is `SET NULL` and the visitor name is snapshotted. Historical tracking names may not match registrations (`tannu` vs `Tannu`, `Demo` vs `Demo Visitor`), so the link is best-effort and nullable.
 - **`release_camera()` is never called** — no shutdown hook/`atexit`; camera may stay locked until process exit.
 - `log_interval` throttle key is `name_status`, so frequent unknown events are throttled per status, not globally.
-- CSV has **mixed date formats** historically (`DD-MM-YYYY` legacy rows vs `YYYY-MM-DD` new rows) and one junk row `{0: 'Vandana'}` — see `data/visitor_logs.csv`.
-- First 3 rows of `data/visitor_registrations.json` lack the `Photo Filename` key (added later feature); frontend tolerates missing keys.
-- `data/visitor_tracking.json` records use the key **`Visitor Name`** (not `Name`). `app.py` joins open visitors to registrations by that key for the server-rendered Inside badge; `visitor-records.js` prefers `Name` but falls back through `name`/`Visitor Name`.
-- Registration timestamps are stored as `"YYYY-MM-DD HH:MM:SS"`; the history date filter compares the first 10 characters against `<input type="date">` values (inclusive ISO string comparison). Rows without a parseable timestamp are excluded only while a date filter is active.
-- **Approval decisions:** `Decision At` is stored as ISO with `T` (`datetime.now().isoformat(timespec="seconds")`); the UI swaps `T` for a space. Older "Approved" records predate the decision fields and have **no** `Decision By`/`Decision At` — Approval History derives from `Approval Status` and shows "Not recorded"; it never fabricates values. Deleting a record is not exposed, so history is append-only.
+- Recognition events keep `event_date`/`event_time` as **strings**, preserving the historical mixed `DD-MM-YYYY`/`YYYY-MM-DD` formats and the junk `{0: 'Vandana'}` row. API shapes are unchanged.
+- Legacy registrations lacking `Photo Filename` import as `""`; serializers always include the key, so the frontend's optional access still works. Decision keys are omitted when there is no stored decision detail.
+- Visits use the key **`Visitor Name`** (not `Name`) and expose exactly the legacy tracking shape (`Entry Date/Time`, `Exit Date/Time`, `Status`). `app.py` joins open visitors to registrations by that key for the server-rendered Inside badge; `visitor-records.js` prefers `Name` but falls back through `name`/`Visitor Name`.
+- Registration timestamps are stored as `DATETIME` and serialized as `"YYYY-MM-DD HH:MM:SS"`; the history date filter still compares the first 10 characters against `<input type="date">` values. Rows without a parseable timestamp are excluded only while a date filter is active.
+- **Approval decisions:** each decision inserts an `approvals` row and updates the visitor status in one transaction. `decided_at` is serialized as ISO with `T`; the UI swaps `T` for a space. Older approvals have NULL maker/time and serialize without those keys, so the UI shows "Not recorded" instead of fabricated values. Deleting is not exposed; history is append-only.
 - **Pagination is client-side**: every API above still returns the full array; the shared paginator slices 10/page after search/filter/sort. Data refresh keeps the current page (clamped); changing search/filters resets to page 1. Server-rendered pages show only the first 10 rows for no-JS parity (`[:10]` in Jinja).
 - `register_visitor` requires `name, phone, purpose, host, department`; `email` optional.
 - `scripts/face_capture.py` and `scripts/face_detection.py` open their own `cv2.VideoCapture(0)` — do not run them while `app.py` streams the same camera.
 - Emails only send when `.env` has `SMTP_USER` + `SMTP_PASSWORD` (`is_email_configured()`); `core/email_sender.py` never raises — failures are logged and the API still succeeds with `email_sent: false`.
 - `MAX_CONTENT_LENGTH = 12 MB`; uploaded image additionally rejected if > 10 MB or not JPEG.
-- Legacy backup files were moved to `backups/` (dead code, gitignored).
+- Legacy data files (`data/*.json`, `data/visitor_logs.csv`) and old backups remain on disk untouched for inspection; the app no longer reads or writes them. Migration backups live in `backups/migration_<timestamp>/` (gitignored).
+- To reset to a clean database, stop the app and delete `data/visitor_management.db`; tables are recreated empty on the next start. Re-run `scripts/migrate_to_sqlite.py` to re-import the legacy snapshot.
 
 ## 9. Likely to-do / improvement backlog (inferred, confirm with user)
 
@@ -240,8 +249,8 @@ Completed in recent refactors (uncommitted, see §10):
 Still open:
 
 - [ ] Release camera on app shutdown (`atexit`/`signal`).
-- [ ] Clean `data/visitor_logs.csv` date formats + stray `{0: 'Vandana'}` row.
-- [ ] Add tests / basic validation; consider a database instead of flat files.
+- [x] Replace flat-file storage with SQLite (Flask-SQLAlchemy) + idempotent importer; mixed legacy dates/rows preserved verbatim.
+- [ ] Add a permanent automated test suite (migration and full workflow were verified with ad-hoc regression/edge-case scripts).
 - [ ] Add authentication for the dashboard and host-approval endpoints.
 - [ ] Optionally expose past entry/exit records (Exited visits) in the history
       page — currently the records panel covers registrations, the logs panel
@@ -258,7 +267,10 @@ Still open:
   the Visitor History records panel (`visitor-records.js` + `history.css`),
   the Approval History page (`approval-history.js`, `approval_history.html`,
   `/api/approval-history`), shared pagination (`pagination.js` +
-  `pagination.css`), `.gitignore`/README/AGENT-MAP updates.
+  `pagination.css`), the SQLite migration (`core/database.py`,
+  `core/models.py`, `scripts/migrate_to_sqlite.py`, all core storage modules,
+  `app.py` startup/log reads, requirements), and `.gitignore`/README/AGENT-MAP
+  updates. The SQLite database itself and migration backups are gitignored.
 - Tracked junk (`server_*.log`, `server_test.pid`, `visitor_registrations.json.testbak`,
   `__pycache__/` incl. a stray `__pycache__/templates/dashboard.html`) has been
   deleted from the working tree; `.gitignore` now prevents them from returning.

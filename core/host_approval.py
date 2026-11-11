@@ -1,5 +1,10 @@
-import json
-from .visitor_registration import REGISTRATION_FILE, load_registrations
+from datetime import datetime
+
+from sqlalchemy.exc import SQLAlchemyError
+
+from .database import app_scope, commit_session, db
+from .models import Approval, Visitor
+
 
 def update_approval(registration_id, decision, decided_by, rejection_reason=None):
     if decision == "approve":
@@ -16,44 +21,55 @@ def update_approval(registration_id, decision, decided_by, rejection_reason=None
     if decision == "Rejected" and not rejection_reason:
         return False, "A rejection reason is required.", None
 
-    registrations = load_registrations()
-    visitor = None
+    with app_scope():
+        visitor = db.session.execute(
+            db.select(Visitor).where(
+                Visitor.registration_id == registration_id
+            )
+        ).scalar_one_or_none()
 
-    for registration in registrations:
-        if registration.get("Registration ID") == registration_id:
-            if registration.get("Approval Status") != "Pending":
-                return False, "This request has already been processed.", None
+        if visitor is None:
+            return False, "Visitor registration not found.", None
 
-            visitor = registration
-            break
+        if visitor.approval_status != "Pending":
+            return False, "This request has already been processed.", None
 
-    if visitor is None:
-        return False, "Visitor registration not found.", None
+        approval = Approval(
+            visitor=visitor,
+            decision=decision,
+            decision_maker=decided_by.strip(),
+            decided_at=datetime.now(),
+            rejection_reason=(
+                rejection_reason.strip()
+                if decision == "Rejected" else None
+            ),
+        )
 
-    visitor["Approval Status"] = decision
-    visitor["Decision By"] = decided_by.strip()
-    visitor["Decision At"] = __import__("datetime").datetime.now().isoformat(timespec="seconds")
+        visitor.approval_status = decision
 
-    if decision == "Rejected":
-        visitor["Rejection Reason"] = rejection_reason.strip()
+        try:
+            db.session.add(approval)
+            commit_session()
+            registration = visitor.to_dict(approval=approval)
+        except SQLAlchemyError:
+            print("Warning: Could not save approval decision.")
+            return False, "Could not save approval decision.", None
 
-    try:
-        with open(REGISTRATION_FILE, "w", encoding="utf-8") as file:
-            json.dump(registrations, file, indent=4)
-
-    except OSError:
-        return False, "Could not save approval decision.", None
-
-    return True, f"Visitor request {decision.lower()} successfully.", visitor
+    return True, f"Visitor request {decision.lower()} successfully.", registration
 
 
 def get_pending_approvals():
-    registrations = load_registrations()
-
-    return [
-        visitor for visitor in registrations
-        if visitor.get("Approval Status") == "Pending"
-    ]
+    with app_scope():
+        visitors = (
+            db.session.execute(
+                db.select(Visitor)
+                .where(Visitor.approval_status == "Pending")
+                .order_by(Visitor.id)
+            )
+            .scalars()
+            .all()
+        )
+        return [visitor.to_dict() for visitor in visitors]
 
 
 def get_approval_history():
@@ -66,19 +82,20 @@ def get_approval_history():
     exactly as stored so callers can show them as "not recorded" instead of
     inventing decision details.
     """
-    registrations = load_registrations()
+    with app_scope():
+        rows = db.session.execute(
+            db.select(Approval, Visitor)
+            .join(Visitor, Approval.visitor_id == Visitor.id)
+            .order_by(
+                db.func.coalesce(
+                    Approval.decided_at,
+                    Visitor.registered_at
+                ).desc(),
+                Approval.id.desc()
+            )
+        ).all()
 
-    history = [
-        visitor for visitor in registrations
-        if visitor.get("Approval Status") in ("Approved", "Rejected")
-    ]
-
-    history.sort(
-        key=lambda visitor: str(
-            visitor.get("Decision At") or
-            visitor.get("Registration Time") or ""
-        ),
-        reverse=True
-    )
-
-    return history
+        return [
+            visitor.to_dict(approval=approval)
+            for approval, visitor in rows
+        ]

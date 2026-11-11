@@ -1,5 +1,4 @@
 import os
-import csv
 import base64
 import binascii
 from datetime import datetime
@@ -20,7 +19,9 @@ from flask import (
 
 from werkzeug.utils import secure_filename
 
+from core.database import init_database
 from core.visitor_logs import (
+    load_logs,
     mark_entry,
     mark_exit,
     get_open_visitors
@@ -48,7 +49,6 @@ from core.face_recognition import (
 # --------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOG_FILE = os.path.join(BASE_DIR, "data", "visitor_logs.csv")
 CAPTURE_DIR = os.path.join(BASE_DIR, "visitor_captures")
 
 os.makedirs(CAPTURE_DIR, exist_ok=True)
@@ -60,22 +60,18 @@ app = Flask(
 
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024
 
+DATABASE_PATH = init_database(app)
+
 
 # --------------------------------------------------
 # VISITOR LOGS AND STATISTICS
 # --------------------------------------------------
 
 def get_visitor_logs():
-    if not os.path.exists(LOG_FILE):
-        return []
-
     try:
-        with open(
-            LOG_FILE, "r", newline="", encoding="utf-8"
-        ) as file:
-            return list(csv.DictReader(file))
+        return load_logs()
 
-    except OSError:
+    except Exception:
         app.logger.exception("Could not read visitor logs")
         return []
 

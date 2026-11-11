@@ -9,6 +9,12 @@ dataset/*
 visitor_captures/*
 data/
 
+# SQLite database files (contain personal visitor records)
+data/*.db
+data/*.db-*
+data/*.sqlite
+data/*.sqlite3
+
 # Environment secrets
 .env
 

@@ -1,21 +1,58 @@
-import csv
 import os
-import json
 from datetime import datetime
 
+from sqlalchemy.exc import SQLAlchemyError
+
+from .database import app_scope, commit_session, db
+from .models import RecognitionEvent, Visit, Visitor
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Legacy CSV/JSON stores. They are kept on disk (see
+# scripts/migrate_to_sqlite.py) but are no longer written or read by the
+# running application.
 LOG_FILE = os.path.join(BASE_DIR, "data", "visitor_logs.csv")
 VISIT_TRACKING_FILE = os.path.join(BASE_DIR, "data", "visitor_tracking.json")
-def load_visit_tracking():
-    if not os.path.exists(VISIT_TRACKING_FILE):
-        return []
 
-    try:
-        with open(VISIT_TRACKING_FILE, "r", encoding="utf-8") as file:
-            return json.load(file)
-    except (json.JSONDecodeError, OSError):
-        print("Warning: Could not read visitor tracking file.")
-        return []
+
+def load_logs():
+    """Recognition events in the order they were recorded (oldest first)."""
+    with app_scope():
+        events = (
+            db.session.execute(
+                db.select(RecognitionEvent).order_by(RecognitionEvent.id)
+            )
+            .scalars()
+            .all()
+        )
+        return [event.to_dict() for event in events]
+
+
+def load_visit_tracking():
+    with app_scope():
+        visits = (
+            db.session.execute(db.select(Visit).order_by(Visit.id))
+            .scalars()
+            .all()
+        )
+        return [visit.to_dict() for visit in visits]
+
+
+def _find_visitor(name):
+    """Best-effort link from a tracking name to a registration."""
+    visitor = db.session.execute(
+        db.select(Visitor).where(Visitor.name == name).order_by(Visitor.id)
+    ).scalars().first()
+
+    if visitor is not None:
+        return visitor
+
+    return db.session.execute(
+        db.select(Visitor)
+        .where(db.func.lower(Visitor.name) == name.lower())
+        .order_by(Visitor.id)
+    ).scalars().first()
+
 
 def mark_entry(name):
     name = name.strip()
@@ -24,79 +61,100 @@ def mark_entry(name):
         print("Cannot register entry for an unknown visitor.")
         return False
 
-    visits = load_visit_tracking()
+    with app_scope():
+        active = db.session.execute(
+            db.select(Visit).where(
+                Visit.visitor_name == name,
+                Visit.status == "Inside",
+            )
+        ).scalars().first()
 
-    # Avoid duplicate active entries for the same visitor
-    for visit in visits:
-        if visit["Visitor Name"] == name and visit["Status"] == "Inside":
+        # Avoid duplicate active entries for the same visitor
+        if active is not None:
             print(f"{name} is already marked as inside.")
             return False
 
-    now = datetime.now()
+        visitor = _find_visitor(name)
+        visit = Visit(
+            visitor_id=visitor.id if visitor is not None else None,
+            visitor_name=name,
+            entry_at=datetime.now(),
+            exit_at=None,
+            status="Inside",
+        )
 
-    visits.append({
-        "Visitor Name": name,
-        "Entry Date": now.strftime("%Y-%m-%d"),
-        "Entry Time": now.strftime("%H:%M:%S"),
-        "Exit Date": "",
-        "Exit Time": "",
-        "Status": "Inside"
-    })
-
-    with open(VISIT_TRACKING_FILE, "w", encoding="utf-8") as file:
-        json.dump(visits, file, indent=4)
+        try:
+            db.session.add(visit)
+            commit_session()
+        except SQLAlchemyError:
+            print("Warning: Could not save visitor entry.")
+            raise
 
     print(f"Entry recorded for {name}.")
     return True
 
+
 def mark_exit(name):
-    visits = load_visit_tracking()
+    name = name.strip()
 
-    for visit in reversed(visits):
-        if (
-            visit["Visitor Name"] == name
-            and visit["Status"] == "Inside"
-        ):
-            now = datetime.now()
-            visit["Exit Date"] = now.strftime("%Y-%m-%d")
-            visit["Exit Time"] = now.strftime("%H:%M:%S")
-            visit["Status"] = "Exited"
+    with app_scope():
+        visit = db.session.execute(
+            db.select(Visit)
+            .where(
+                Visit.visitor_name == name,
+                Visit.status == "Inside",
+            )
+            .order_by(Visit.id.desc())
+        ).scalars().first()
 
-            with open(VISIT_TRACKING_FILE, "w", encoding="utf-8") as file:
-                json.dump(visits, file, indent=4)
+        if visit is None:
+            print(f"No active visit found for {name}.")
+            return False
 
-            print(f"Exit recorded for {name}.")
-            return True
+        visit.exit_at = datetime.now()
+        visit.status = "Exited"
 
-    print(f"No active visit found for {name}.")
-    return False
+        try:
+            commit_session()
+        except SQLAlchemyError:
+            print("Warning: Could not save visitor exit.")
+            raise
+
+    print(f"Exit recorded for {name}.")
+    return True
 
 
 def log_visitor(name, status):
-    file_exists = os.path.exists(LOG_FILE)
+    now = datetime.now()
 
-    with open(LOG_FILE, "a", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
+    event = RecognitionEvent(
+        visitor_name=name,
+        event_date=now.strftime("%Y-%m-%d"),
+        event_time=now.strftime("%H:%M:%S"),
+        status=status,
+    )
 
-        if not file_exists or os.path.getsize(LOG_FILE) == 0:
-            writer.writerow(["Visitor Name", "Date", "Time", "Status"])
-
-        now = datetime.now()
-
-        writer.writerow([
-            name,
-            now.strftime("%Y-%m-%d"),
-            now.strftime("%H:%M:%S"),
-            status
-        ])
+    try:
+        with app_scope():
+            db.session.add(event)
+            commit_session()
+    except SQLAlchemyError:
+        print("Warning: Could not save visitor log.")
+        raise
 
     print(f"Visitor logged: {name} - {status}")
 
 
 def get_open_visitors():
     """Return visitors who are currently inside."""
-    visits = load_visit_tracking()
-    return [
-        visit for visit in visits
-        if visit.get("Status") == "Inside"
-    ]
+    with app_scope():
+        visits = (
+            db.session.execute(
+                db.select(Visit)
+                .where(Visit.status == "Inside")
+                .order_by(Visit.id)
+            )
+            .scalars()
+            .all()
+        )
+        return [visit.to_dict() for visit in visits]
