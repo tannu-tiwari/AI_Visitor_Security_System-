@@ -14,6 +14,9 @@ approval, and tracks who is currently inside through a security dashboard.
 - Optional email notifications (registration + approval/rejection emails).
 - Multi-page dashboard with sidebar navigation: overview, registration,
   recognition, approvals, inside visitors and visitor history.
+- Custom modal dialogs for approvals and entry/exit confirmations (no native
+  browser popups).
+- Toast notifications and loading indicators for all actions.
 - Searchable recognition logs.
 - JSON API endpoints consumed by the pages (auto-refresh every 10s).
 
@@ -123,13 +126,13 @@ simply skipped.
 1. **Register a visitor** — on the *Visitor Registration* page, capture a photo
    from the live feed (the form appears after capture) and fill in the
    registration details (name, phone, purpose, host, department).
-2. **Host approval** — the request appears on the *Host Approvals* page;
-   approve or reject it (approvals record the host's name; rejections ask
-   for a reason).
+2. **Host approval** — the request appears on the *Host Approvals* page; a
+   modal dialog asks for the host's name (and, when rejecting, a mandatory
+   reason) before the decision is submitted.
 3. **Mark entry** — approved visitors appear on the *Inside Visitors* page;
-   click "Mark Entry" when they actually enter.
+   click "Mark Entry" and confirm the visitor in the dialog.
 4. **Mark exit** — visitors currently inside appear on the same page; click
-   "Mark Exit" when they leave.
+   "Mark Exit" and confirm to close their entry record.
 5. **Monitor** — the *Dashboard* page shows live statistics, recent activity
    and pending approvals; the *Visitor History* page lists all recognition
    events with search. The *Face Recognition* page shows the live feed and the
@@ -160,7 +163,8 @@ templates/                    Jinja templates (page markup)
 static/styles/                Dashboard CSS, split by component
 static/js/                    Shared JavaScript modules (utils, camera,
                              photo capture, registration, logs, approvals,
-                             entry/exit, status pill)
+                             entry/exit, status pill, modal dialogs,
+                             toast notifications, loading indicators)
 static/js/pages/             One entry module per page
 data/                         Runtime data files
     visitor_registrations.json  Visitor registrations + approval status

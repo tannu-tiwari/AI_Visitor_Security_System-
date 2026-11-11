@@ -1,4 +1,7 @@
 import { $, fetchJSON, escapeHTML, setText } from "./utils.js";
+import { confirmDialog } from "./modal.js";
+import { toast } from "./toast.js";
+import { setButtonLoading } from "./loading.js";
 
 export async function loadInsideVisitors() {
     try {
@@ -31,7 +34,8 @@ export async function loadInsideVisitors() {
                     <p>Entry time: ${escapeHTML(time || "Not available")}</p>
                     <div class="list-actions">
                         <button class="button button-danger small-button"
-                            data-exit-name="${escapeHTML(name)}">
+                            data-exit-name="${escapeHTML(name)}"
+                            data-exit-time="${escapeHTML(time)}">
                             Mark Exit
                         </button>
                     </div>
@@ -87,7 +91,9 @@ export async function loadApprovedVisitors() {
                     <div class="list-actions">
                         <button class="button button-primary small-button"
                             data-entry-name="${escapeHTML(name)}"
-                            data-entry-id="${escapeHTML(id)}">
+                            data-entry-id="${escapeHTML(id)}"
+                            data-entry-purpose="${escapeHTML(purpose)}"
+                            data-entry-host="${escapeHTML(host)}">
                             Mark Entry
                         </button>
                     </div>
@@ -117,21 +123,61 @@ export function initVisitorEntryExit() {
             if (!button) return;
 
             const name = button.dataset.entryName;
-            if (!confirm("Mark " + name + " as entered?")) return;
+            const purpose = button.dataset.entryPurpose || "";
+            const host = button.dataset.entryHost || "";
 
-            button.disabled = true;
+            const details = [];
+            if (host && host !== "Not provided") details.push("Host: " + host);
+            if (purpose && purpose !== "Not provided") {
+                details.push("Purpose: " + purpose);
+            }
+
+            setButtonLoading(button, true);
+
             try {
-                const response = await fetchJSON("/mark-entry", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name })
+                let response;
+
+                const confirmed = await confirmDialog({
+                    title: "Confirm Visitor Entry",
+                    description: "Mark " + name + " as entered?" +
+                        (details.length ? " " + details.join(" · ") + "." : "") +
+                        " Their entry time will be recorded and they will " +
+                        "appear under Currently Inside.",
+                    confirmLabel: "Mark Entry",
+                    onConfirm: async () => {
+                        response = await fetchJSON("/mark-entry", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ name })
+                        });
+
+                        if (response && response.success === false) {
+                            throw new Error(
+                                response.message ||
+                                "Entry could not be recorded. Please check the Flask backend."
+                            );
+                        }
+                    }
                 });
-                alert(response.message || "Entry request sent.");
-                await Promise.all([loadInsideVisitors(), loadApprovedVisitors()]);
+
+                if (!confirmed) return;
+
+                toast.success(
+                    (response && response.message) ||
+                    name + " marked as entered."
+                );
+                await Promise.all([
+                    loadInsideVisitors(),
+                    loadApprovedVisitors()
+                ]);
             } catch (error) {
-                alert("Entry could not be recorded. Please check the Flask backend.");
+                console.error("Entry error:", error);
+                toast.error(
+                    error.message ||
+                    "Entry could not be recorded. Please check the Flask backend."
+                );
             } finally {
-                button.disabled = false;
+                setButtonLoading(button, false);
             }
         });
     }
@@ -142,19 +188,53 @@ export function initVisitorEntryExit() {
             if (!button) return;
 
             const name = button.dataset.exitName;
-            if (!confirm("Mark " + name + " as exited?")) return;
+            const entryTime = button.dataset.exitTime || "";
+
+            setButtonLoading(button, true);
 
             try {
-                const response = await fetchJSON("/mark-exit", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name })
+                let response;
+
+                const confirmed = await confirmDialog({
+                    title: "Confirm Visitor Exit",
+                    description: "Mark " + name + " as exited?" +
+                        (entryTime && entryTime !== "Not available"
+                            ? " They entered at " + entryTime + "."
+                            : "") +
+                        " Their entry record will be closed.",
+                    confirmLabel: "Mark Exit",
+                    danger: true,
+                    onConfirm: async () => {
+                        response = await fetchJSON("/mark-exit", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ name })
+                        });
+
+                        if (response && response.success === false) {
+                            throw new Error(
+                                response.message ||
+                                "Exit could not be recorded. Please check the Flask backend."
+                            );
+                        }
+                    }
                 });
 
-                alert(response.message || "Exit request sent.");
+                if (!confirmed) return;
+
+                toast.success(
+                    (response && response.message) ||
+                    name + " marked as exited."
+                );
                 await loadInsideVisitors();
             } catch (error) {
-                alert("Exit could not be recorded. Please check the Flask backend.");
+                console.error("Exit error:", error);
+                toast.error(
+                    error.message ||
+                    "Exit could not be recorded. Please check the Flask backend."
+                );
+            } finally {
+                setButtonLoading(button, false);
             }
         });
     }

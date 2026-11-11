@@ -1,4 +1,6 @@
 import { $, fetchJSON } from "./utils.js";
+import { toast } from "./toast.js";
+import { setButtonLoading } from "./loading.js";
 
 // Visitor photo capture for the registration flow. The live feed itself is
 // handled by camera-feed.js; this module grabs a frame from the feed <img>,
@@ -10,12 +12,11 @@ async function captureVisitorPhoto() {
     const feed = $("liveCameraFeed");
     const button = $("captureVisitorButton");
     if (!feed || !feed.complete || !feed.naturalWidth || !feed.naturalHeight) {
-        alert("Camera feed is not ready. Please wait and try again.");
+        toast.warning("Camera feed is not ready. Please wait and try again.");
         return;
     }
 
-    button.disabled = true;
-    button.textContent = "Capturing...";
+    setButtonLoading(button, true, "Capturing...");
 
     try {
         const canvas = $("captureCanvas");
@@ -45,10 +46,9 @@ async function captureVisitorPhoto() {
         if (!$("visitorName").value.trim()) $("visitorName").focus();
     } catch (error) {
         console.error("Capture failed:", error);
-        alert("Photo capture failed: " + error.message);
+        toast.error("Photo capture failed: " + error.message);
     } finally {
-        button.disabled = false;
-        button.textContent = "Capture Visitor";
+        setButtonLoading(button, false);
     }
 }
 

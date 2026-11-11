@@ -1,6 +1,7 @@
 import { $, fetchJSON, showFeedback } from "./utils.js";
 import { retakeVisitorPhoto } from "./photo-capture.js";
 import { loadApprovals } from "./visitor-approval.js";
+import { setButtonLoading } from "./loading.js";
 
 export function initVisitorRegistration() {
     $("registrationForm").addEventListener("submit", async event => {
@@ -17,8 +18,7 @@ export function initVisitorRegistration() {
             return;
         }
 
-        submitButton.disabled = true;
-        submitButton.textContent = "Submitting...";
+        setButtonLoading(submitButton, true, "Submitting...");
 
         try {
             const response = await fetchJSON("/register-visitor", {
@@ -53,8 +53,7 @@ export function initVisitorRegistration() {
                 false
             );
         } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = "Submit Registration";
+            setButtonLoading(submitButton, false);
         }
     });
 }

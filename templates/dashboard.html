@@ -136,7 +136,7 @@
                 <span class="badge badge-orange" id="pendingSummaryBadge">Pending</span>
             </div>
             <div id="pendingSummaryList">
-                <div class="empty-state">Loading pending approvals...</div>
+                <div class="loading-state"><span class="spinner"></span> Loading pending approvals...</div>
             </div>
             <div class="list-actions">
                 <a class="button button-secondary small-button" href="{{ url_for('approvals_page') }}">
@@ -154,7 +154,7 @@
                 <span class="badge badge-green" id="insideSummaryBadge">0 Visitors</span>
             </div>
             <div id="insideSummaryList">
-                <div class="empty-state">Loading visitor records...</div>
+                <div class="loading-state"><span class="spinner"></span> Loading visitor records...</div>
             </div>
             <div class="list-actions">
                 <a class="button button-secondary small-button" href="{{ url_for('inside_visitors_page') }}">

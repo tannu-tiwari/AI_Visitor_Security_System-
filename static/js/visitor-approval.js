@@ -1,5 +1,8 @@
 import { $, fetchJSON, escapeHTML, setText } from "./utils.js";
 import { loadApprovedVisitors } from "./visitor-entry-exit.js";
+import { formDialog } from "./modal.js";
+import { toast } from "./toast.js";
+import { setButtonLoading } from "./loading.js";
 
 export async function loadApprovals() {
     try {
@@ -62,13 +65,17 @@ export async function loadApprovals() {
                         <div class="list-actions">
                             <button class="button button-primary small-button"
                                 data-approval-id="${escapeHTML(id)}"
-                                data-decision="approved">
+                                data-decision="approved"
+                                data-visitor-name="${escapeHTML(name)}"
+                                data-visitor-host="${escapeHTML(host)}">
                                 Approve
                             </button>
 
                             <button class="button button-danger small-button"
                                 data-approval-id="${escapeHTML(id)}"
-                                data-decision="rejected">
+                                data-decision="rejected"
+                                data-visitor-name="${escapeHTML(name)}"
+                                data-visitor-host="${escapeHTML(host)}">
                                 Reject
                             </button>
                         </div>
@@ -100,68 +107,101 @@ export function initVisitorApproval() {
 
         const id = button.dataset.approvalId;
         const decision = button.dataset.decision;
+        const visitorName = button.dataset.visitorName || "this visitor";
+        const visitorHost = button.dataset.visitorHost || "";
 
         if (!id) {
-            alert("Registration ID is missing.");
+            toast.warning("Registration ID is missing.");
             return;
         }
 
-        const decidedBy = prompt("Enter the host's name:");
+        const rejecting = decision === "rejected";
+        const description = (visitorHost && visitorHost !== "Not provided"
+            ? visitorName + " — visiting " + visitorHost + ". "
+            : visitorName + ". ") +
+            (rejecting
+                ? "Enter the host's name and the reason for rejecting this request."
+                : "Enter the host's name to approve this request.");
 
-        if (!decidedBy || !decidedBy.trim()) {
-            alert("Host name is required.");
-            return;
-        }
-
-        let rejectionReason = "";
-
-        if (decision === "rejected") {
-            rejectionReason = prompt("Enter the reason for rejection:");
-
-            if (!rejectionReason || !rejectionReason.trim()) {
-                alert("A rejection reason is required.");
-                return;
-            }
-        }
-
-        button.disabled = true;
+        setButtonLoading(button, true);
 
         try {
-            const response = await fetchJSON(
-                "/host-approval/" + encodeURIComponent(id) + "/" +
-                encodeURIComponent(decision),
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        decided_by: decidedBy.trim(),
-                        rejection_reason: rejectionReason.trim()
-                    })
+            let response;
+
+            const values = await formDialog({
+                title: rejecting
+                    ? "Reject Visitor Request"
+                    : "Approve Visitor Request",
+                description,
+                confirmLabel: rejecting ? "Reject Visitor" : "Approve Visitor",
+                danger: rejecting,
+                fields: [
+                    {
+                        name: "decided_by",
+                        label: "Your Name (Host / Decision Maker)",
+                        type: "text",
+                        required: true,
+                        placeholder: "e.g. Dr. A. Mehta"
+                    }
+                ].concat(rejecting ? [
+                    {
+                        name: "rejection_reason",
+                        label: "Rejection Reason",
+                        type: "textarea",
+                        required: true,
+                        placeholder: "Why is this visitor being rejected?"
+                    }
+                ] : []),
+                onConfirm: async (values) => {
+                    response = await fetchJSON(
+                        "/host-approval/" + encodeURIComponent(id) + "/" +
+                        encodeURIComponent(decision),
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                decided_by: values.decided_by,
+                                rejection_reason: values.rejection_reason || ""
+                            })
+                        }
+                    );
+
+                    if (response && response.success === false) {
+                        throw new Error(
+                            response.message ||
+                            "Approval could not be updated. Check the backend."
+                        );
+                    }
                 }
-            );
+            });
 
-            let message = response.message || "Approval decision processed.";
+            if (values === null) return;
 
-            if (response.success) {
-                message += response.email_sent
+            let message = (response && response.message) ||
+                "Approval decision processed.";
+
+            if (!response || response.success) {
+                message += response && response.email_sent
                     ? " Email sent to the visitor."
                     : " Email could not be sent.";
             }
 
-            alert(message);
+            toast.success(message);
 
-            if (response.success) {
-                await loadApprovals();
+            await loadApprovals();
+            if ($("approvedList")) {
                 await loadApprovedVisitors();
             }
-
         } catch (error) {
             console.error("Approval error:", error);
-            alert("Approval could not be updated. Check the backend.");
+            toast.error(
+                error.message ||
+                "Approval could not be updated. Check the backend."
+            );
         } finally {
-            button.disabled = false;
+            setButtonLoading(button, false);
         }
     });
 }

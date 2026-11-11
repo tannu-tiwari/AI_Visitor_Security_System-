@@ -2,8 +2,9 @@
 
 > Read this first at the start of any session. It describes what the project is,
 > where everything lives, how the pieces connect, and what is likely still to do.
-> Last updated: 2026-11-11 (multi-page split on top of the earlier root-folder
-> restructure and JS/CSS extraction).
+> Last updated: 2026-11-11 (reusable modal dialogs, toast notifications and
+> loading indicators on top of the multi-page split, root-folder restructure and
+> JS/CSS extraction).
 
 ## 1. What this project is
 
@@ -88,12 +89,16 @@ Browser ──► /api/visitor-logs, /api/open-visitors, /api/registrations,
 | `templates/dashboard.html` | **Overview page**: 5 stat cards (incl. pending approvals), recent visitor activity, read-only pending + inside summaries with links. |
 | `templates/registration.html` | Photo capture from the live feed + registration form (photo-first gating: form hidden until capture). |
 | `templates/recognition.html` | Live `/video_feed` stream, camera badge + Check/Restart/Retry controls, recent recognition events. |
-| `templates/approvals.html` | Pending approvals with photos + approve/reject (prompt() host name + rejection reason). |
-| `templates/inside_visitors.html` | Approved Visitors (Mark Entry) + Currently Inside (Mark Exit). |
+| `templates/approvals.html` | Pending approvals with photos + approve/reject (modal dialog asks for the host's name; rejections also require a reason). |
+| `templates/inside_visitors.html` | Approved Visitors (Mark Entry) + Currently Inside (Mark Exit), each behind a confirmation modal. |
 | `templates/visitor_history.html` | Full recognition logs table + client-side search. |
-| `static/styles/*.css` | Dashboard CSS split by component (base, layout, **sidebar**, topbar, buttons, badges, stats, panels, forms, camera, tables). |
+| `static/styles/*.css` | Dashboard CSS split by component (base, layout, **sidebar**, topbar, buttons, badges, stats, panels, forms, camera, tables, **loading**, **modal**, **toast**). |
 | `static/js/*.js` | Shared feature modules (see §7). |
 | `static/js/pages/*.js` | Per-page entry modules (dashboard, registration, recognition, approvals, inside-visitors, visitor-history). |
+
+No page uses native `prompt()`/`confirm()`/`alert()` any more — all
+confirmations and small forms go through the shared modal, all transient
+feedback goes through toasts (registration keeps its inline feedback panel).
 
 ### Data / assets
 
@@ -143,14 +148,17 @@ one feature module can serve several pages.
 | Module | Used by | Role |
 |--------|---------|------|
 | `utils.js` | all | `$`, `setText` (null-safe), `fetchJSON`, `showFeedback`, `escapeHTML`. |
+| `modal.js` | approvals, inside-visitors | Reusable dialogs: `confirmDialog({...})` → `Promise<boolean>`, `formDialog({fields})` → `Promise<values\|null>`. One shared dialog element; focus trap + Tab wrap, Escape/backdrop/×/Cancel dismissal (blocked while `onConfirm` is in flight), inline field validation with trimming, restores focus on close. Cancel resolves `false`/`null` and never calls `onConfirm`; `onConfirm` throwing closes the dialog and rejects so callers can toast the failure. |
+| `toast.js` | all pages that act | `toast.success/error/warning/info(message)` — stacked, auto-dismissing (errors last longer), manually closable, capped at 5 visible, messages set via `textContent`. |
+| `loading.js` | all | `setButtonLoading(button, busy, label)` — disables the button, adds a spinner + `aria-busy`, stores/restores the original label. |
 | `status-pill.js` | base (all pages) | One `/camera-status` fetch → header pill. |
 | `camera-feed.js` | recognition | `checkCamera` (pill + panel badge), retry/restart feed buttons. |
-| `photo-capture.js` | registration | `captureVisitorPhoto` (canvas ← feed `<img>` → `/save-capture`), `retakeVisitorPhoto`, reveals the form. |
-| `visitor-registration.js` | registration | Form submit → `/register-visitor`; photo-first gating; pending-list refresh only if present. |
-| `visitor-logs.js` | history, dashboard, recognition | `loadLogs` (updates stat cards when present, returns logs), `logRowHTML`, search + refresh. |
-| `visitor-approval.js` | approvals, dashboard | `loadApprovals` (returns list, updates badge when present); delegated approve/reject with `prompt()` host name + required rejection reason. |
-| `visitor-entry-exit.js` | inside-visitors, dashboard | `loadInsideVisitors` / `loadApprovedVisitors` (return data, update badges/stats when present); delegated Mark Entry / Mark Exit with `confirm()`. |
-| `pages/dashboard.js` | `/` | Refresh button + 10s polling: logs, pending, inside → stat cards + read-only summaries. |
+| `photo-capture.js` | registration | `captureVisitorPhoto` (canvas ← feed `<img>` → `/save-capture`), `retakeVisitorPhoto`, reveals the form; busy capture button, toast on failure. |
+| `visitor-registration.js` | registration | Form submit → `/register-visitor`; photo-first gating; submit button busy state; inline feedback panel; pending-list refresh only if present. |
+| `visitor-logs.js` | history, dashboard, recognition | `loadLogs` (updates stat cards when present, returns logs), `logRowHTML`, search + refresh (refresh button busy while fetching). |
+| `visitor-approval.js` | approvals, dashboard | `loadApprovals` (returns list, updates badge when present); delegated approve/reject opens a `formDialog` (host name, required; + reason when rejecting) that POSTs the unchanged payload; success/failure toasts; row button disabled during the flow. |
+| `visitor-entry-exit.js` | inside-visitors, dashboard | `loadInsideVisitors` / `loadApprovedVisitors` (return data, update badges/stats when present); delegated Mark Entry / Mark Exit open a `confirmDialog` identifying the visitor (host/purpose/entry time) before posting; toasts + list refresh on success, row button disabled during the flow. |
+| `pages/dashboard.js` | `/` | Refresh button (busy while refreshing) + 10s polling: logs, pending, inside → stat cards + read-only summaries. |
 | `pages/registration.js` | `/registration` | `initPhotoCapture` + `initVisitorRegistration`. |
 | `pages/recognition.js` | `/recognition` | `initCameraFeed` + `checkCamera` + 10s recent-events polling. |
 | `pages/approvals.js` | `/approvals` | `initVisitorApproval` + 10s pending polling. |
@@ -158,8 +166,8 @@ one feature module can serve several pages.
 | `pages/visitor-history.js` | `/visitor-history` | `initVisitorLogs` + `loadLogs` + 10s polling. |
 
 Camera feed: `<img src="/video_feed">` appears only on `/registration` and
-`/recognition`. Approve/reject still uses `prompt()` dialogs (host name +
-rejection reason), entry/exit uses `confirm()` — unchanged from the single-page UI.
+`/recognition`. Approve/reject and entry/exit run through `modal.js` (see
+above); their POST payloads and endpoints are unchanged.
 
 ## 8. Key facts / gotchas
 
@@ -189,6 +197,13 @@ Completed in recent refactors (uncommitted, see §10):
 - [x] Reorganize the root into `core/`, `scripts/`, `data/`, `model/` (all paths CWD-independent).
 - [x] Split the single-page dashboard into six pages with a shared `base.html`
       sidebar layout and per-page JS entry modules.
+- [x] Replace native `prompt()`/`confirm()` with a reusable modal system
+      (`modal.js` + `modal.css`), with validation, focus trap and busy-state
+      dismissal protection.
+- [x] Add reusable toast notifications (`toast.js` + `toast.css`) and loading
+      indicators (`loading.js` + `loading.css`) for actions and refreshes.
+- [x] Add confirmation dialogs to Mark Entry / Mark Exit identifying the
+      visitor before any request is sent.
 
 Still open:
 
@@ -206,7 +221,8 @@ Still open:
   purpose — the user asked not to push yet): backend reorganization into
   `core/`/`scripts/`/`data/`, JS/CSS extraction, approval-workflow and
   email-template improvements, the multi-page split (`base.html` + 6 page
-  templates + `static/js/pages/`), `.gitignore`/README/AGENT-MAP updates.
+  templates + `static/js/pages/`), the modal/toast/loading UI system, the
+  two-column approval cards, `.gitignore`/README/AGENT-MAP updates.
 - Tracked junk (`server_*.log`, `server_test.pid`, `visitor_registrations.json.testbak`,
   `__pycache__/` incl. a stray `__pycache__/templates/dashboard.html`) has been
   deleted from the working tree; `.gitignore` now prevents them from returning.

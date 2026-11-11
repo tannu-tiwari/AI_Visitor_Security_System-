@@ -1,0 +1,125 @@
+/* Reusable toast notifications (see static/js/toast.js). */
+
+.toast-container {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    z-index: 1200;
+    max-width: min(380px, calc(100vw - 24px));
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--muted);
+    border-radius: 9px;
+    box-shadow: var(--shadow);
+    padding: 11px 12px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text);
+    pointer-events: auto;
+    animation: toast-in 0.22s ease-out;
+}
+
+@keyframes toast-in {
+    from {
+        transform: translateY(8px);
+        opacity: 0;
+    }
+    to {
+        transform: none;
+        opacity: 1;
+    }
+}
+
+.toast-hide {
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.22s ease-in, transform 0.22s ease-in;
+}
+
+.toast-success {
+    border-left-color: var(--primary);
+}
+
+.toast-error {
+    border-left-color: var(--red);
+}
+
+.toast-warning {
+    border-left-color: var(--orange);
+}
+
+.toast-info {
+    border-left-color: #3b82f6;
+}
+
+.toast-icon {
+    flex: none;
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 1px;
+}
+
+.toast-success .toast-icon {
+    background: var(--primary);
+}
+
+.toast-error .toast-icon {
+    background: var(--red);
+}
+
+.toast-warning .toast-icon {
+    background: var(--orange);
+}
+
+.toast-info .toast-icon {
+    background: #3b82f6;
+}
+
+.toast-message {
+    flex: 1;
+    overflow-wrap: break-word;
+}
+
+.toast-close {
+    flex: none;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 3px;
+}
+
+.toast-close:hover {
+    color: var(--text);
+}
+
+@media (max-width: 600px) {
+    .toast-container {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        max-width: none;
+    }
+
+    .toast {
+        font-size: 12px;
+    }
+}

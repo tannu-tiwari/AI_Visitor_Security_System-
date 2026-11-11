@@ -1,4 +1,5 @@
 import { $, escapeHTML, fetchJSON, setText } from "./utils.js";
+import { setButtonLoading } from "./loading.js";
 
 let allLogs = [];
 
@@ -78,6 +79,13 @@ export function initVisitorLogs() {
     }
 
     if (refreshButton) {
-        refreshButton.addEventListener("click", loadLogs);
+        refreshButton.addEventListener("click", async () => {
+            setButtonLoading(refreshButton, true, "Refreshing...");
+            try {
+                await loadLogs();
+            } finally {
+                setButtonLoading(refreshButton, false);
+            }
+        });
     }
 }

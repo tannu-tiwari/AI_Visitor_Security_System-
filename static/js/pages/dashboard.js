@@ -2,6 +2,7 @@ import { $, escapeHTML, setText } from "../utils.js";
 import { loadLogs, logRowHTML } from "../visitor-logs.js";
 import { loadInsideVisitors } from "../visitor-entry-exit.js";
 import { loadApprovals } from "../visitor-approval.js";
+import { setButtonLoading } from "../loading.js";
 
 function renderRecentActivity(logs) {
     const tbody = $("recentActivityBody");
@@ -88,7 +89,14 @@ async function refreshOverview() {
 
 const refreshButton = $("refreshButton");
 if (refreshButton) {
-    refreshButton.addEventListener("click", refreshOverview);
+    refreshButton.addEventListener("click", async () => {
+        setButtonLoading(refreshButton, true, "Refreshing...");
+        try {
+            await refreshOverview();
+        } finally {
+            setButtonLoading(refreshButton, false);
+        }
+    });
 }
 
 refreshOverview();
