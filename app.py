@@ -94,7 +94,7 @@ def get_visitor_stats(logs):
 
 
 # --------------------------------------------------
-# DASHBOARD
+# PAGES
 # --------------------------------------------------
 
 @app.route("/")
@@ -104,7 +104,38 @@ def dashboard():
     return render_template(
         "dashboard.html",
         logs=logs[::-1],
+        pending_approvals=len(get_pending_approvals()),
         **get_visitor_stats(logs)
+    )
+
+
+@app.route("/registration")
+def registration_page():
+    return render_template("registration.html")
+
+
+@app.route("/recognition")
+def recognition_page():
+    return render_template("recognition.html")
+
+
+@app.route("/approvals")
+def approvals_page():
+    return render_template("approvals.html")
+
+
+@app.route("/inside-visitors")
+def inside_visitors_page():
+    return render_template("inside_visitors.html")
+
+
+@app.route("/visitor-history")
+def visitor_history_page():
+    logs = get_visitor_logs()
+
+    return render_template(
+        "visitor_history.html",
+        logs=logs[::-1]
     )
 
 

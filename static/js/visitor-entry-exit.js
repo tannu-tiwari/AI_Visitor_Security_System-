@@ -1,4 +1,4 @@
-import { $, fetchJSON, escapeHTML } from "./utils.js";
+import { $, fetchJSON, escapeHTML, setText } from "./utils.js";
 
 export async function loadInsideVisitors() {
     try {
@@ -7,16 +7,19 @@ export async function loadInsideVisitors() {
             ? data
             : (data.visitors || data.open_visitors || []);
 
-        $("insideVisitors").textContent = visitors.length;
-        $("insideBadge").textContent = visitors.length + " Visitors";
+        setText("insideVisitors", visitors.length);
+        setText("insideBadge", visitors.length + " Visitors");
+
+        const list = $("insideList");
+        if (!list) return visitors;
 
         if (!visitors.length) {
-            $("insideList").innerHTML =
+            list.innerHTML =
                 '<div class="empty-state">No open entry records.</div>';
-            return;
+            return visitors;
         }
 
-        $("insideList").innerHTML = visitors.map(visitor => {
+        list.innerHTML = visitors.map(visitor => {
             const name = visitor.Name || visitor.name ||
                 visitor["Visitor Name"] || "Unknown";
             const time = visitor["Entry Time"] ||
@@ -35,9 +38,15 @@ export async function loadInsideVisitors() {
                 </div>
             `;
         }).join("");
+
+        return visitors;
     } catch (error) {
-        $("insideList").innerHTML =
-            '<div class="empty-state">Could not load open visitor records.</div>';
+        const list = $("insideList");
+        if (list) {
+            list.innerHTML =
+                '<div class="empty-state">Could not load open visitor records.</div>';
+        }
+        return [];
     }
 }
 
@@ -52,15 +61,18 @@ export async function loadApprovedVisitors() {
                 .toLowerCase() === "approved"
         );
 
-        $("approvedBadge").textContent = approved.length + " Approved";
+        setText("approvedBadge", approved.length + " Approved");
+
+        const list = $("approvedList");
+        if (!list) return approved;
 
         if (!approved.length) {
-            $("approvedList").innerHTML =
+            list.innerHTML =
                 '<div class="empty-state">No approved visitors waiting for entry.</div>';
-            return;
+            return approved;
         }
 
-        $("approvedList").innerHTML = approved.map(visitor => {
+        list.innerHTML = approved.map(visitor => {
             const name = visitor.Name || visitor.name || "Visitor";
             const id = visitor["Registration ID"] || visitor.registration_id || visitor.id || "";
             const purpose = visitor.Purpose || visitor.purpose || "";
@@ -82,55 +94,68 @@ export async function loadApprovedVisitors() {
                 </div>
             `;
         }).join("");
+
+        return approved;
     } catch (error) {
         console.error("Could not load approved visitors:", error);
-        $("approvedList").innerHTML =
-            '<div class="empty-state">Could not load approved visitors.</div>';
+        const list = $("approvedList");
+        if (list) {
+            list.innerHTML =
+                '<div class="empty-state">Could not load approved visitors.</div>';
+        }
+        return [];
     }
 }
 
 export function initVisitorEntryExit() {
-    $("approvedList").addEventListener("click", async event => {
-        const button = event.target.closest("[data-entry-name]");
-        if (!button) return;
+    const approvedList = $("approvedList");
+    const insideList = $("insideList");
 
-        const name = button.dataset.entryName;
-        if (!confirm("Mark " + name + " as entered?")) return;
+    if (approvedList) {
+        approvedList.addEventListener("click", async event => {
+            const button = event.target.closest("[data-entry-name]");
+            if (!button) return;
 
-        button.disabled = true;
-        try {
-            const response = await fetchJSON("/mark-entry", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name })
-            });
-            alert(response.message || "Entry request sent.");
-            await Promise.all([loadInsideVisitors(), loadApprovedVisitors()]);
-        } catch (error) {
-            alert("Entry could not be recorded. Please check the Flask backend.");
-        } finally {
-            button.disabled = false;
-        }
-    });
+            const name = button.dataset.entryName;
+            if (!confirm("Mark " + name + " as entered?")) return;
 
-    $("insideList").addEventListener("click", async event => {
-        const button = event.target.closest("[data-exit-name]");
-        if (!button) return;
+            button.disabled = true;
+            try {
+                const response = await fetchJSON("/mark-entry", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name })
+                });
+                alert(response.message || "Entry request sent.");
+                await Promise.all([loadInsideVisitors(), loadApprovedVisitors()]);
+            } catch (error) {
+                alert("Entry could not be recorded. Please check the Flask backend.");
+            } finally {
+                button.disabled = false;
+            }
+        });
+    }
 
-        const name = button.dataset.exitName;
-        if (!confirm("Mark " + name + " as exited?")) return;
+    if (insideList) {
+        insideList.addEventListener("click", async event => {
+            const button = event.target.closest("[data-exit-name]");
+            if (!button) return;
 
-        try {
-            const response = await fetchJSON("/mark-exit", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name })
-            });
+            const name = button.dataset.exitName;
+            if (!confirm("Mark " + name + " as exited?")) return;
 
-            alert(response.message || "Exit request sent.");
-            await loadInsideVisitors();
-        } catch (error) {
-            alert("Exit could not be recorded. Please check the Flask backend.");
-        }
-    });
+            try {
+                const response = await fetchJSON("/mark-exit", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name })
+                });
+
+                alert(response.message || "Exit request sent.");
+                await loadInsideVisitors();
+            } catch (error) {
+                alert("Exit could not be recorded. Please check the Flask backend.");
+            }
+        });
+    }
 }

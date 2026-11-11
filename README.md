@@ -9,10 +9,13 @@ approval, and tracks who is currently inside through a security dashboard.
 
 - Live webcam feed with face recognition (recognized vs. unknown).
 - Visitor registration with a live captured photo.
-- Host approval / rejection workflow.
+- Host approval / rejection workflow with host name and rejection reason.
 - Visitor entry and exit tracking (who is currently inside).
-- Dashboard with statistics and searchable recognition logs.
-- JSON API endpoints consumed by the dashboard (auto-refresh every 10s).
+- Optional email notifications (registration + approval/rejection emails).
+- Multi-page dashboard with sidebar navigation: overview, registration,
+  recognition, approvals, inside visitors and visitor history.
+- Searchable recognition logs.
+- JSON API endpoints consumed by the pages (auto-refresh every 10s).
 
 ## Tech Stack
 
@@ -20,6 +23,7 @@ approval, and tracks who is currently inside through a security dashboard.
 - Flask
 - OpenCV (`opencv-contrib-python`, for `cv2.face`)
 - NumPy
+- python-dotenv (SMTP email settings)
 - Plain CSV/JSON files for storage (no database)
 
 ## Prerequisites
@@ -58,8 +62,8 @@ approval, and tracks who is currently inside through a security dashboard.
 
 ## Preparing Face Data (one-time / when adding people)
 
-1. Capture face samples for a new person. This asks for a name and saves 30
-   grayscale face crops into `dataset/<Name>/`:
+1. Capture face samples for a new person. This asks for a name and saves up
+   to 100 grayscale face crops into `dataset/<Name>/`:
 
    ```bash
    python scripts/face_capture.py
@@ -91,21 +95,45 @@ Then open a browser at:
 http://127.0.0.1:5000
 ```
 
-The live camera feed is embedded in the dashboard, so the face-recognition
-pipeline starts automatically when the page loads.
+The live camera feed is embedded in the Face Recognition and Visitor
+Registration pages, so the face-recognition pipeline starts automatically when
+either page is opened.
+
+## Email Notifications (optional)
+
+The app can email the host when a visitor registers, and email the visitor
+when their request is approved or rejected (rejection emails include the
+reason). To enable this:
+
+1. Copy `.env.example` to `.env` in the project root.
+
+   ```bash
+   cp .env.example .env      # Windows: copy .env.example .env
+   ```
+
+2. Fill in your SMTP settings (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
+   `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_USE_TLS`). For Gmail, `SMTP_PASSWORD`
+   must be an app password, not your normal password.
+
+Without a configured `.env`, everything else works normally and emails are
+simply skipped.
 
 ## Usage Flow
 
-1. **Register a visitor** — capture a photo from the live feed and fill in the
-   registration form (name, phone, purpose, host, department).
-2. **Host approval** — the request appears under "Pending Host Approvals";
-   approve or reject it.
-3. **Mark entry** — approved visitors appear under "Approved Visitors"; click
-   "Mark Entry" when they actually enter.
-4. **Mark exit** — visitors currently inside appear under "Currently Inside";
-   click "Mark Exit" when they leave.
-5. **Monitor** — stats, recognition logs, and the live feed update on the
-   dashboard.
+1. **Register a visitor** — on the *Visitor Registration* page, capture a photo
+   from the live feed (the form appears after capture) and fill in the
+   registration details (name, phone, purpose, host, department).
+2. **Host approval** — the request appears on the *Host Approvals* page;
+   approve or reject it (approvals record the host's name; rejections ask
+   for a reason).
+3. **Mark entry** — approved visitors appear on the *Inside Visitors* page;
+   click "Mark Entry" when they actually enter.
+4. **Mark exit** — visitors currently inside appear on the same page; click
+   "Mark Exit" when they leave.
+5. **Monitor** — the *Dashboard* page shows live statistics, recent activity
+   and pending approvals; the *Visitor History* page lists all recognition
+   events with search. The *Face Recognition* page shows the live feed and the
+   latest recognition results.
 
 ## Project Structure
 
@@ -121,9 +149,19 @@ scripts/                      Standalone utilities (run from the project root)
     face_capture.py           Script to capture training face images
     train_model.py            Trains the LBPH model from dataset/
     face_detection.py         Standalone face-detection demo (not used by app)
-templates/dashboard.html      Dashboard markup (Jinja template)
+templates/                    Jinja templates (page markup)
+    base.html                 Shared layout: sidebar navigation + header
+    dashboard.html            Overview page (stats, recent activity, summaries)
+    registration.html         Photo capture + visitor registration form
+    recognition.html          Live camera feed + recognition status
+    approvals.html            Pending host approvals (approve / reject)
+    inside_visitors.html      Entry and exit management
+    visitor_history.html      Recognition logs with search
 static/styles/                Dashboard CSS, split by component
-static/js/                    Dashboard JavaScript, split by feature
+static/js/                    Shared JavaScript modules (utils, camera,
+                             photo capture, registration, logs, approvals,
+                             entry/exit, status pill)
+static/js/pages/             One entry module per page
 data/                         Runtime data files
     visitor_registrations.json  Visitor registrations + approval status
     visitor_logs.csv            Recognition event log
@@ -132,6 +170,8 @@ dataset/                      Training images per person
 model/                        Trained LBPH model, label names + Haar cascade
 visitor_captures/             Photos captured from the browser
 backups/                      Old backup files (not tracked by git)
+.env                          SMTP email settings (not tracked by git)
+.env.example                  Template for the SMTP settings
 requirements.txt              Python dependencies
 AGENT-MAP.md                  Developer minimap of the project
 ```
@@ -140,7 +180,12 @@ AGENT-MAP.md                  Developer minimap of the project
 
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
-| GET | `/` | Dashboard page |
+| GET | `/` | Dashboard overview page |
+| GET | `/registration` | Visitor registration page |
+| GET | `/recognition` | Face recognition page |
+| GET | `/approvals` | Host approvals page |
+| GET | `/inside-visitors` | Inside visitors page |
+| GET | `/visitor-history` | Visitor history page |
 | GET | `/health` | Health check |
 | GET | `/video_feed` | Live MJPEG camera feed |
 | GET | `/camera-status` | Camera availability |

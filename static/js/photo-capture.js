@@ -1,17 +1,10 @@
 import { $, fetchJSON } from "./utils.js";
 
+// Visitor photo capture for the registration flow. The live feed itself is
+// handled by camera-feed.js; this module grabs a frame from the feed <img>,
+// saves it through /save-capture and reveals the registration form.
+
 let capturedFilename = "";
-
-function retryCameraFeed() {
-    const feed = document.getElementById("liveCameraFeed");
-    const error = document.getElementById("cameraFeedError");
-
-    error.style.display = "none";
-    feed.style.display = "block";
-
-    // Reconnect to the Flask video stream.
-    feed.src = "/video_feed?t=" + Date.now();
-}
 
 async function captureVisitorPhoto() {
     const feed = $("liveCameraFeed");
@@ -69,38 +62,15 @@ export function retakeVisitorPhoto() {
     $("captureStatus").textContent = "";
 }
 
-export async function checkCamera() {
-    $("cameraStatus").textContent = "Checking camera...";
-    $("cameraDot").className = "status-dot";
-    $("cameraBadge").className = "badge badge-gray";
-    $("cameraBadge").textContent = "Checking";
+export function initPhotoCapture() {
+    const captureButton = $("captureVisitorButton");
+    const retakeButton = $("retakePhotoButton");
 
-    try {
-        const data = await fetchJSON("/camera-status");
-
-        if (data.camera_available) {
-            $("cameraStatus").textContent = "Camera Available";
-            $("cameraDot").className = "status-dot online";
-            $("cameraBadge").className = "badge badge-green";
-            $("cameraBadge").textContent = "Available";
-        } else {
-            $("cameraStatus").textContent = "Camera Unavailable";
-            $("cameraDot").className = "status-dot offline";
-            $("cameraBadge").className = "badge badge-red";
-            $("cameraBadge").textContent = "Unavailable";
-        }
-    } catch (error) {
-        $("cameraStatus").textContent = "Status Unavailable";
-        $("cameraDot").className = "status-dot offline";
-        $("cameraBadge").className = "badge badge-red";
-        $("cameraBadge").textContent = "Error";
+    if (captureButton) {
+        captureButton.addEventListener("click", captureVisitorPhoto);
     }
-}
 
-export function initCamera() {
-    $("retryCameraButton").addEventListener("click", retryCameraFeed);
-    $("restartFeedButton").addEventListener("click", retryCameraFeed);
-    $("checkCameraButton").addEventListener("click", checkCamera);
-    $("captureVisitorButton").addEventListener("click", captureVisitorPhoto);
-    $("retakePhotoButton").addEventListener("click", retakeVisitorPhoto);
+    if (retakeButton) {
+        retakeButton.addEventListener("click", retakeVisitorPhoto);
+    }
 }

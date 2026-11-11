@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Face Recognition · AI Visitor Security System{% endblock %}
+
+{% block page_title %}Face Recognition{% endblock %}
+{% block page_subtitle %}Live camera feed with real-time face recognition{% endblock %}
+
+{% block content %}
+
+<section class="main-grid">
+
+    <div class="left-column">
+
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <h3>Camera Status</h3>
+                    <p>Camera availability on the server computer</p>
+                </div>
+                <span class="badge badge-gray" id="cameraBadge">Checking</span>
+            </div>
+
+            <div class="camera-preview"
+                style="padding: 0; overflow: hidden; position: relative; min-height: 235px; background: #111827;">
+
+                <img id="liveCameraFeed" src="/video_feed" alt="Live face recognition camera feed"
+                    style="display: block; width: 100%; height: auto; min-height: 235px; object-fit: contain;"
+                    onerror="this.style.display='none'; document.getElementById('cameraFeedError').style.display='block';">
+
+                <div id="cameraFeedError"
+                    style="display: none; padding: 30px; text-align: center; color: #cbd5e1;">
+                    <div style="font-size: 40px; margin-bottom: 12px;">📷</div>
+                    <p>Live camera feed could not be loaded.</p>
+                    <p style="margin-top: 8px; font-size: 12px;">
+                        Check that the Flask server is running and the camera is available.
+                    </p>
+                    <button class="button button-primary" style="margin-top: 15px;"
+                        id="retryCameraButton">
+                        Retry Camera
+                    </button>
+                </div>
+            </div>
+
+            <div class="camera-actions">
+                <button class="button button-primary" id="checkCameraButton">
+                    Check Camera
+                </button>
+                <button class="button button-secondary" id="restartFeedButton">
+                    Restart Video Feed
+                </button>
+            </div>
+
+            <div class="notice">
+                Live camera feed with face recognition is connected through Flask.
+                Green boxes indicate recognized faces and red boxes indicate unknown faces.
+            </div>
+        </section>
+
+    </div>
+
+    <div class="right-column">
+
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <h3>Recent Recognition Events</h3>
+                    <p>Latest results from the live feed</p>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Visitor Name</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Recognition Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentRecognitionBody">
+                        <tr>
+                            <td colspan="4" class="empty-state">Loading recognition events...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="notice">
+                The full recognition history with search is available on the
+                Visitor History page.
+            </div>
+        </section>
+
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/recognition.js') }}"></script>
+{% endblock %}

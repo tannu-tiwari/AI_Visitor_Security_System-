@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Visitor Registration · AI Visitor Security System{% endblock %}
+
+{% block page_title %}Visitor Registration{% endblock %}
+{% block page_subtitle %}Capture a visitor photo and submit details for host approval{% endblock %}
+
+{% block content %}
+
+<section class="panel">
+    <div class="panel-heading">
+        <div>
+            <h3>Visitor Photo</h3>
+            <p>Live camera feed on the server computer</p>
+        </div>
+        <span class="badge badge-orange">Approval Required</span>
+    </div>
+
+    <div class="camera-preview"
+        style="padding: 0; overflow: hidden; position: relative; min-height: 235px; background: #111827;">
+
+        <img id="liveCameraFeed" src="/video_feed" alt="Live camera feed for visitor photo capture"
+            style="display: block; width: 100%; height: auto; min-height: 235px; object-fit: contain;"
+            onerror="this.style.display='none'; document.getElementById('cameraFeedError').style.display='block';">
+
+        <div id="cameraFeedError"
+            style="display: none; padding: 30px; text-align: center; color: #cbd5e1;">
+            <div style="font-size: 40px; margin-bottom: 12px;">📷</div>
+            <p>Live camera feed could not be loaded.</p>
+            <p style="margin-top: 8px; font-size: 12px;">
+                Check that the Flask server is running and the camera is available.
+            </p>
+            <button class="button button-primary" style="margin-top: 15px;"
+                id="retryCameraButton">
+                Retry Camera
+            </button>
+        </div>
+    </div>
+
+    <div id="capturePanel"
+        style="display:none; margin-top:15px; padding:14px; border:1px solid var(--border); border-radius:10px;">
+        <h4 style="margin-bottom:10px;">Captured Visitor Photo</h4>
+        <img id="capturedPhotoPreview" alt="Captured visitor photo"
+            style="display:none; width:100%; max-width:360px; border-radius:8px; margin-bottom:12px;">
+        <p id="captureStatus" style="font-size:13px; color:var(--muted); margin-bottom:10px;"></p>
+        <button class="button button-secondary" id="retakePhotoButton" type="button">Retake
+            Photo</button>
+    </div>
+    <canvas id="captureCanvas" style="display:none;"></canvas>
+
+    <div class="camera-actions">
+        <button class="button button-primary" id="captureVisitorButton" type="button">
+            Capture Visitor
+        </button>
+    </div>
+
+    <div class="notice">
+        A photo must be captured before the registration form appears.
+        Green boxes in the feed indicate recognized faces; red boxes indicate unknown faces.
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-heading">
+        <div>
+            <h3>Visitor Registration</h3>
+            <p>Enter visitor details for host approval</p>
+        </div>
+    </div>
+
+    <form id="registrationForm" style="display:none;">
+        <div class="form-grid">
+
+            <div class="form-group">
+                <label for="visitorName">Visitor Name *</label>
+                <input id="visitorName" name="name" type="text" required
+                    placeholder="Enter full name">
+            </div>
+
+            <div class="form-group">
+                <label for="visitorPhone">Phone Number *</label>
+                <input id="visitorPhone" name="phone" type="tel" required pattern="[0-9]{10}"
+                    maxlength="10" placeholder="10-digit mobile number">
+            </div>
+
+            <div class="form-group">
+                <label for="visitorEmail">Email</label>
+                <input id="visitorEmail" name="email" type="email"
+                    placeholder="visitor@example.com">
+            </div>
+
+            <div class="form-group">
+                <label for="visitorDepartment">Department *</label>
+                <select id="visitorDepartment" name="department" required>
+                    <option value="">Select department</option>
+                    <option>Computer Science</option>
+                    <option>Information Technology</option>
+                    <option>Electronics</option>
+                    <option>Mechanical</option>
+                    <option>Civil</option>
+                    <option>Administration</option>
+                    <option>Admissions</option>
+                    <option>Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="visitorPurpose">Purpose of Visit *</label>
+                <select id="visitorPurpose" name="purpose" required>
+                    <option value="">Select purpose</option>
+                    <option>Admission Inquiry</option>
+                    <option>Meeting with Faculty</option>
+                    <option>Official Meeting</option>
+                    <option>Parent Visit</option>
+                    <option>Delivery</option>
+                    <option>Maintenance</option>
+                    <option>Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="visitorHost">Host / Person to Meet *</label>
+                <input id="visitorHost" name="host" type="text" required
+                    placeholder="Faculty or staff name">
+            </div>
+
+        </div>
+
+        <input type="hidden" id="captureFilename" name="capture_filename">
+        <button class="button button-primary form-submit" type="submit">
+            Save Registration
+        </button>
+
+        <div class="feedback" id="registrationFeedback" role="status"></div>
+    </form>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/registration.js') }}"></script>
+{% endblock %}

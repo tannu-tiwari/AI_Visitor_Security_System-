@@ -6,6 +6,11 @@
     font-size: 13px;
 }
 
+a.button {
+    display: inline-block;
+    text-decoration: none;
+}
+
 .button-primary {
     background: var(--primary);
     color: white;

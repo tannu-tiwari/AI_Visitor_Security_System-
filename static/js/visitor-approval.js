@@ -1,4 +1,4 @@
-import { $, fetchJSON, escapeHTML } from "./utils.js";
+import { $, fetchJSON, escapeHTML, setText } from "./utils.js";
 import { loadApprovedVisitors } from "./visitor-entry-exit.js";
 
 export async function loadApprovals() {
@@ -8,15 +8,18 @@ export async function loadApprovals() {
             ? data
             : (data.approvals || data.pending || []);
 
-        $("pendingBadge").textContent = approvals.length + " Pending";
+        setText("pendingBadge", approvals.length + " Pending");
+
+        const list = $("approvalList");
+        if (!list) return approvals;
 
         if (!approvals.length) {
-            $("approvalList").innerHTML =
+            list.innerHTML =
                 '<div class="empty-state">No pending approvals.</div>';
-            return;
+            return approvals;
         }
 
-        $("approvalList").innerHTML = approvals.map(visitor => {
+        list.innerHTML = approvals.map(visitor => {
             const name = visitor.Name || visitor.name || "Visitor";
             const phone = visitor.Phone || visitor.phone || "Not provided";
             const email = visitor.Email || visitor.email || "Not provided";
@@ -31,53 +34,67 @@ export async function loadApprovals() {
                 visitor.registration_id || visitor.id || "";
 
             return `
-                <div class="list-item">
-                    <h4>${escapeHTML(name)}</h4>
+                <div class="approval-card">
+                    <div class="approval-photo">
+                        ${photo ? `
+                            <img
+                                src="/visitor-captures/${encodeURIComponent(photo)}"
+                                alt="Visitor photo of ${escapeHTML(name)}"
+                                onerror="this.outerHTML='<div class=&quot;photo-missing&quot;>No visitor photo available.</div>'"
+                            >
+                        ` : `
+                            <div class="photo-missing">No visitor photo available.</div>
+                        `}
+                    </div>
 
-                    ${photo ? `
-                        <img
-                            src="/visitor-captures/${encodeURIComponent(photo)}"
-                            alt="Visitor photo of ${escapeHTML(name)}"
-                            style="width:100px;height:100px;object-fit:cover;border-radius:8px;"
-                            onerror="this.outerHTML='<p>No visitor photo available.</p>'"
-                        >
-                    ` : "<p>No visitor photo available.</p>"}
+                    <div class="approval-info">
+                        <h4>${escapeHTML(name)}</h4>
 
-                    <p>
-                        Phone: ${escapeHTML(phone)}<br>
-                        Email: ${escapeHTML(email)}<br>
-                        Purpose: ${escapeHTML(purpose)}<br>
-                        Host: ${escapeHTML(host)}<br>
-                        Department: ${escapeHTML(department)}<br>
-                        Registered: ${escapeHTML(registrationTime)}
-                    </p>
+                        <p>
+                            Phone: ${escapeHTML(phone)}<br>
+                            Email: ${escapeHTML(email)}<br>
+                            Purpose: ${escapeHTML(purpose)}<br>
+                            Host: ${escapeHTML(host)}<br>
+                            Department: ${escapeHTML(department)}<br>
+                            Registered: ${escapeHTML(registrationTime)}
+                        </p>
 
-                    <div class="list-actions">
-                        <button class="button button-primary small-button"
-                            data-approval-id="${escapeHTML(id)}"
-                            data-decision="approved">
-                            Approve
-                        </button>
+                        <div class="list-actions">
+                            <button class="button button-primary small-button"
+                                data-approval-id="${escapeHTML(id)}"
+                                data-decision="approved">
+                                Approve
+                            </button>
 
-                        <button class="button button-danger small-button"
-                            data-approval-id="${escapeHTML(id)}"
-                            data-decision="rejected">
-                            Reject
-                        </button>
+                            <button class="button button-danger small-button"
+                                data-approval-id="${escapeHTML(id)}"
+                                data-decision="rejected">
+                                Reject
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
         }).join("");
 
+        return approvals;
+
     } catch (error) {
         console.error("Approval loading error:", error);
-        $("approvalList").innerHTML =
-            '<div class="empty-state">Could not load host approvals.</div>';
+        const list = $("approvalList");
+        if (list) {
+            list.innerHTML =
+                '<div class="empty-state">Could not load host approvals.</div>';
+        }
+        return [];
     }
 }
 
 export function initVisitorApproval() {
-    $("approvalList").addEventListener("click", async event => {
+    const list = $("approvalList");
+    if (!list) return;
+
+    list.addEventListener("click", async event => {
         const button = event.target.closest("[data-approval-id]");
         if (!button) return;
 

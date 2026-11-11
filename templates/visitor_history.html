@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Visitor History · AI Visitor Security System{% endblock %}
+
+{% block page_title %}Visitor History{% endblock %}
+{% block page_subtitle %}Recognition events recorded by the face-recognition program{% endblock %}
+
+{% block content %}
+
+<section class="panel table-panel">
+    <div class="panel-heading">
+        <div>
+            <h3>Visitor Recognition Logs</h3>
+            <p>Every recognized and unknown face event, newest first</p>
+        </div>
+
+        <div class="table-toolbar">
+            <input class="search-input" type="search" id="logSearch" placeholder="Search visitor...">
+            <button class="button button-secondary" id="refreshLogsButton">
+                Refresh Logs
+            </button>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Visitor Name</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Recognition Status</th>
+                </tr>
+            </thead>
+            <tbody id="logsTableBody">
+                {% if logs %}
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.get('Visitor Name', '') }}</td>
+                    <td>{{ log.get('Date', '') }}</td>
+                    <td>{{ log.get('Time', '') }}</td>
+                    <td>
+                        {% if log.get('Status', '') == 'Recognized' %}
+                        <span class="badge badge-green">Recognized</span>
+                        {% else %}
+                        <span class="badge badge-red">Unknown</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="4" class="empty-state">No visitor logs available.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="notice">
+        These are recognition events, not a verified attendance register.
+        An entry or exit should be recorded through the appropriate security workflow.
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/visitor-history.js') }}"></script>
+{% endblock %}

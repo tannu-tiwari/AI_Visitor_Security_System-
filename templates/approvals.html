@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Host Approvals · AI Visitor Security System{% endblock %}
+
+{% block page_title %}Host Approvals{% endblock %}
+{% block page_subtitle %}Review submitted visitor registration requests{% endblock %}
+
+{% block content %}
+
+<section class="panel">
+    <div class="panel-heading">
+        <div>
+            <h3>Pending Host Approvals</h3>
+            <p>Review submitted registrations</p>
+        </div>
+        <span class="badge badge-orange" id="pendingBadge">Pending</span>
+    </div>
+    <div id="approvalList" class="approvals-grid">
+        <div class="empty-state">Loading approvals...</div>
+    </div>
+
+    <div class="notice">
+        Approving or rejecting a request records the host's name and the decision time.
+        Rejections require a reason. The visitor is notified by email when email
+        settings are configured. Approved visitors can then be marked as entered on
+        the Inside Visitors page.
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/approvals.js') }}"></script>
+{% endblock %}

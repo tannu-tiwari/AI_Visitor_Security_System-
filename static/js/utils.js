@@ -1,5 +1,12 @@
 export const $ = (id) => document.getElementById(id);
 
+export function setText(id, value) {
+    const element = $(id);
+    if (element) {
+        element.textContent = String(value);
+    }
+}
+
 export function escapeHTML(value) {
     return String(value ?? "").replace(/[&<>"']/g, character => ({
         "&": "&amp;",

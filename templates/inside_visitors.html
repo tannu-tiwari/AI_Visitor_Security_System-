@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Inside Visitors · AI Visitor Security System{% endblock %}
+
+{% block page_title %}Inside Visitors{% endblock %}
+{% block page_subtitle %}Entry and exit management for approved visitors{% endblock %}
+
+{% block content %}
+
+<section class="main-grid">
+
+    <div class="left-column">
+
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <h3>Approved Visitors</h3>
+                    <p>Mark entry for visitors approved by the host</p>
+                </div>
+                <span class="badge badge-green" id="approvedBadge">0 Approved</span>
+            </div>
+            <div id="approvedList">
+                <div class="empty-state">Loading approved visitors...</div>
+            </div>
+
+            <div class="notice">
+                Use "Mark Entry" when an approved visitor actually arrives at the gate.
+                Their entry time is recorded and they appear under Currently Inside.
+            </div>
+        </section>
+
+    </div>
+
+    <div class="right-column">
+
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <h3>Currently Inside</h3>
+                    <p>Visitors with open entry records</p>
+                </div>
+                <span class="badge badge-green" id="insideBadge">0 Visitors</span>
+            </div>
+            <div id="insideList">
+                <div class="empty-state">Loading visitor records...</div>
+            </div>
+
+            <div class="notice">
+                Use "Mark Exit" when a visitor leaves the campus to close their
+                entry record.
+            </div>
+        </section>
+
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/pages/inside-visitors.js') }}"></script>
+{% endblock %}

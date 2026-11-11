@@ -1,5 +1,5 @@
 import { $, fetchJSON, showFeedback } from "./utils.js";
-import { retakeVisitorPhoto } from "./camera.js";
+import { retakeVisitorPhoto } from "./photo-capture.js";
 import { loadApprovals } from "./visitor-approval.js";
 
 export function initVisitorRegistration() {
@@ -41,7 +41,10 @@ export function initVisitorRegistration() {
             if (success) {
                 form.reset();
                 retakeVisitorPhoto();
-                await loadApprovals();
+                // Refresh the pending list only on pages that show it.
+                if ($("approvalList")) {
+                    await loadApprovals();
+                }
             }
         } catch (error) {
             showFeedback(

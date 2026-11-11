@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI Visitor Security System{% endblock %}</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/sidebar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/topbar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/buttons.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/badges.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/stats.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/panels.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/forms.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/camera.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/tables.css') }}">
+</head>
+
+<body>
+    <div class="app-shell">
+
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">🛡</div>
+                <div>
+                    <h1>AI Visitor Security</h1>
+                    <p>Smart College Visitor Management System</p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard') }}" class="nav-link{{ ' active' if request.path == '/' }}"
+                    aria-current="{{ 'page' if request.path == '/' }}">
+                    <span class="nav-icon">📊</span>
+                    Dashboard
+                </a>
+                <a href="{{ url_for('registration_page') }}"
+                    class="nav-link{{ ' active' if request.path == '/registration' }}"
+                    aria-current="{{ 'page' if request.path == '/registration' }}">
+                    <span class="nav-icon">📝</span>
+                    Visitor Registration
+                </a>
+                <a href="{{ url_for('recognition_page') }}"
+                    class="nav-link{{ ' active' if request.path == '/recognition' }}"
+                    aria-current="{{ 'page' if request.path == '/recognition' }}">
+                    <span class="nav-icon">📷</span>
+                    Face Recognition
+                </a>
+                <a href="{{ url_for('approvals_page') }}"
+                    class="nav-link{{ ' active' if request.path == '/approvals' }}"
+                    aria-current="{{ 'page' if request.path == '/approvals' }}">
+                    <span class="nav-icon">✅</span>
+                    Host Approvals
+                </a>
+                <a href="{{ url_for('inside_visitors_page') }}"
+                    class="nav-link{{ ' active' if request.path == '/inside-visitors' }}"
+                    aria-current="{{ 'page' if request.path == '/inside-visitors' }}">
+                    <span class="nav-icon">🏢</span>
+                    Inside Visitors
+                </a>
+                <a href="{{ url_for('visitor_history_page') }}"
+                    class="nav-link{{ ' active' if request.path == '/visitor-history' }}"
+                    aria-current="{{ 'page' if request.path == '/visitor-history' }}">
+                    <span class="nav-icon">📜</span>
+                    Visitor History
+                </a>
+            </nav>
+
+            <div class="sidebar-foot">
+                AI Visitor Security System<br>
+                Smart College Visitor Management
+            </div>
+        </aside>
+
+        <div class="app-main">
+
+            <header class="topbar">
+                <div class="page-title">
+                    <h2>{% block page_title %}{% endblock %}</h2>
+                    <p>{% block page_subtitle %}{% endblock %}</p>
+                </div>
+
+                <div class="top-right">
+                    <div class="status-pill">
+                        <span class="status-dot" id="cameraDot"></span>
+                        <span id="cameraStatus">Checking camera...</span>
+                    </div>
+                    <div class="status-pill">
+                        <span class="status-dot online"></span>
+                        System Online
+                    </div>
+                </div>
+            </header>
+
+            <main class="container">
+                {% block content %}{% endblock %}
+            </main>
+
+            <footer class="footer">
+                AI Visitor Security System · Smart College Visitor Management
+            </footer>
+
+        </div>
+    </div>
+
+    <script type="module" src="{{ url_for('static', filename='js/status-pill.js') }}"></script>
+    {% block scripts %}{% endblock %}
+
+</body>
+
+</html>
