@@ -1,16 +1,20 @@
 import cv2
 import os
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 name = input("Enter visitor name: ").strip()
 
 if not name:
     print("Name cannot be empty!")
     raise SystemExit
 
-save_path = os.path.join("dataset", name)
+save_path = os.path.join(BASE_DIR, "dataset", name)
 os.makedirs(save_path, exist_ok=True)
 
-cascade_path = "haarcascade_frontalface_default.xml"
+cascade_path = os.path.join(
+    BASE_DIR, "model", "haarcascade_frontalface_default.xml"
+)
 
 face_cascade = cv2.CascadeClassifier(cascade_path)
 

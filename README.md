@@ -62,7 +62,7 @@ approval, and tracks who is currently inside through a security dashboard.
    grayscale face crops into `dataset/<Name>/`:
 
    ```bash
-   python face_capture.py
+   python scripts/face_capture.py
    ```
 
    Press `q` in the preview window to stop early.
@@ -70,7 +70,7 @@ approval, and tracks who is currently inside through a security dashboard.
 2. Train the face recognition model from the dataset:
 
    ```bash
-   python train_model.py
+   python scripts/train_model.py
    ```
 
    This writes `model/face_model.yml` and `model/label_names.npy`.
@@ -110,24 +110,30 @@ pipeline starts automatically when the page loads.
 ## Project Structure
 
 ```
-app.py                     Main Flask application and all routes
-face_recognition.py        Live recognition + MJPEG streaming module
-face_capture.py            Script to capture training face images
-train_model.py             Trains the LBPH model from dataset/
-face_detection.py          Standalone face-detection demo (not used by app)
-visitor_logs.py            Recognition logging + entry/exit tracking
-visitor_registration.py    Visitor registration logic
-host_approval.py           Host approval logic
-templates/dashboard.html   Combined HTML/CSS/JS dashboard UI
-dataset/                   Training images per person
-model/                     Trained model + label names
-visitor_captures/          Photos captured from the browser
-visitor_logs.csv           Recognition event log
-visitor_tracking.json      Entry/exit records
-visitor_registrations.json Visitor registrations + approval status
-haarcascade_frontalface_default.xml  Haar face detector
-requirements.txt           Python dependencies
-AGENT-MAP.md               Developer minimap of the project
+app.py                        Main Flask application and all routes
+core/                         Backend modules used by app.py
+    email_sender.py           Registration / decision emails (SMTP)
+    face_recognition.py       Live recognition + MJPEG streaming module
+    host_approval.py          Host approval logic
+    visitor_logs.py           Recognition logging + entry/exit tracking
+    visitor_registration.py   Visitor registration logic
+scripts/                      Standalone utilities (run from the project root)
+    face_capture.py           Script to capture training face images
+    train_model.py            Trains the LBPH model from dataset/
+    face_detection.py         Standalone face-detection demo (not used by app)
+templates/dashboard.html      Dashboard markup (Jinja template)
+static/styles/                Dashboard CSS, split by component
+static/js/                    Dashboard JavaScript, split by feature
+data/                         Runtime data files
+    visitor_registrations.json  Visitor registrations + approval status
+    visitor_logs.csv            Recognition event log
+    visitor_tracking.json       Entry/exit records
+dataset/                      Training images per person
+model/                        Trained LBPH model, label names + Haar cascade
+visitor_captures/             Photos captured from the browser
+backups/                      Old backup files (not tracked by git)
+requirements.txt              Python dependencies
+AGENT-MAP.md                  Developer minimap of the project
 ```
 
 ## API Endpoints
@@ -150,10 +156,12 @@ AGENT-MAP.md               Developer minimap of the project
 
 ## Notes and Troubleshooting
 
-- Only one program can use the webcam at a time. Do not run `face_capture.py`
-  or `face_detection.py` while `app.py` is streaming the camera.
+- Only one program can use the webcam at a time. Do not run
+  `scripts/face_capture.py` or `scripts/face_detection.py` while `app.py` is
+  streaming the camera.
 - If the model files are missing, recognition is disabled but the rest of the
-  dashboard still works. Run `face_capture.py` then `train_model.py`.
+  dashboard still works. Run `scripts/face_capture.py` then
+  `scripts/train_model.py`.
 - Do not commit `__pycache__/`, large model files, or captured images unless
   intended.
 - The recognition confidence is a distance: lower is better. Anything below

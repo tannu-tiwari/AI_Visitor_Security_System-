@@ -3,8 +3,8 @@ import json
 import os
 from datetime import datetime
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-REGISTRATION_FILE = os.path.join(BASE_DIR, "visitor_registrations.json")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REGISTRATION_FILE = os.path.join(BASE_DIR, "data", "visitor_registrations.json")
 
 
 def load_registrations():

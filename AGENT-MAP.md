@@ -30,10 +30,10 @@ There is **no** `requirements.txt`, `README`, test suite, `AGENTS.md`, or `.giti
 
 ```powershell
 # 1. (once) capture face samples for a new person -> dataset/<Name>/*.jpg
-python face_capture.py
+python scripts/face_capture.py
 
 # 2. (once per dataset change) retrain the LBPH model
-python train_model.py
+python scripts/train_model.py
 
 # 3. start the app
 python app.py            # http://127.0.0.1:5000
@@ -64,35 +64,37 @@ Browser ──► /api/visitor-logs, /api/open-visitors, /api/registrations,
 
 | File | Role |
 |------|------|
-| `app.py` | **Main Flask app** (429 lines). All routes, stats helpers, image upload, run config. Imports the other modules below. |
-| `face_recognition.py` | **Live recognition module** (234 lines). Loads LBPH model + Haar cascade once (`initialize_recognition`), opens webcam once (`get_camera`), yields annotated MJPEG frames (`generate_frames`), `camera_available()`, `release_camera()`. Threshold `CONFIDENCE_THRESHOLD=50`, per-person logging throttle `LOG_INTERVAL=30s`. |
-| `visitor_logs.py` | Log/tracking logic: `log_visitor` (append to CSV), `mark_entry`/`mark_exit` (tracking JSON), `get_open_visitors`, `load_visit_tracking`. |
-| `visitor_registration.py` | `register_visitor(...)` creates a registration with `Registration ID=VIS-<timestamp>` and `Approval Status=Pending`; `load_registrations`. Exports `REGISTRATION_FILE`. |
-| `host_approval.py` | `update_approval(registration_id, decision)` sets Approved/Rejected (only from Pending); `get_pending_approvals`. |
-| `train_model.py` | Trains LBPH on `dataset/<person>/*.jpg`, saves `model/face_model.yml` + `model/label_names.npy`. Sorts names alphabetically → label IDs. |
-| `face_capture.py` | Interactive script: prompts for a name, captures 30 face crops into `dataset/<name>/`. |
-| `face_detection.py` | Standalone beginner demo: webcam window that draws boxes around faces (Hindi comments). Not used by the app. |
+| `app.py` | **Main Flask app** (root). All routes, stats helpers, image upload, run config. Imports the `core/` modules below. |
+| `core/face_recognition.py` | **Live recognition module**. Loads LBPH model + Haar cascade once (`initialize_recognition`), opens webcam once (`get_camera`), yields annotated MJPEG frames (`generate_frames`), `camera_available()`, `release_camera()`. Threshold `CONFIDENCE_THRESHOLD=50`, per-person logging throttle `LOG_INTERVAL=30s`. |
+| `core/visitor_logs.py` | Log/tracking logic: `log_visitor` (append to CSV), `mark_entry`/`mark_exit` (tracking JSON), `get_open_visitors`, `load_visit_tracking`. Paths are `__file__`-based (CWD independent). |
+| `core/visitor_registration.py` | `register_visitor(...)` creates a registration with `Registration ID=VIS-<timestamp>` and `Approval Status=Pending`; `load_registrations`. Exports `REGISTRATION_FILE`. |
+| `core/host_approval.py` | `update_approval(registration_id, decision, decided_by, rejection_reason)` sets Approved/Rejected (only from Pending) and records `Decision By` / `Decision At` / `Rejection Reason`; `get_pending_approvals`. |
+| `core/email_sender.py` | SMTP emails: `send_registration_email`, `send_decision_email` (never raise). Loads `.env` from the project root. |
+| `scripts/train_model.py` | Trains LBPH on `dataset/<person>/*.jpg`, saves `model/face_model.yml` + `model/label_names.npy`. Sorts names alphabetically → label IDs. |
+| `scripts/face_capture.py` | Interactive script: prompts for a name, captures 100 face crops into `dataset/<name>/`. |
+| `scripts/face_detection.py` | Standalone beginner demo: webcam window that draws boxes around faces (Hindi comments). Not used by the app. |
 
-### Templates
+### Templates and static assets
 
 | File | Role |
 |------|------|
-| `templates/dashboard.html` | **The whole UI** (1387 lines): embedded CSS + HTML + JS. Sections: topbar, 4 stat cards, camera panel + capture, registration form, "Currently Inside", "Approved Visitors", "Pending Host Approvals", recognition log table with search. Vanilla JS polls APIs and posts actions. |
-| `templates/dashboard_backup.html` | Older UI backup. Not rendered. |
+| `templates/dashboard.html` | **The dashboard markup** (Jinja template): HTML skeleton + Jinja stats/log table. |
+| `static/styles/*.css` | Dashboard CSS split by component (base, layout, topbar, buttons, badges, stats, panels, forms, camera, tables). |
+| `static/js/*.js` | Dashboard JavaScript split by feature (utils, camera, visitor-registration, visitor-logs, visitor-approval, visitor-entry-exit, main). `main.js` is the ES-module entry point. |
 
 ### Data / assets
 
 | Path | Meaning |
 |------|---------|
-| `dataset/Tannu/*.jpg`, `dataset/Vandana/*.jpg` | Training face crops (30 each). Folder name = person label. |
+| `dataset/<Name>/*.jpg` | Training face crops. Folder name = person label. |
 | `model/face_model.yml` | Trained LBPH model (~8 MB). |
-| `model/label_names.npy` | Label array — currently `['Tannu' 'Vandana']`. |
-| `haarcascade_frontalface_default.xml` | Haar frontal-face cascade used for detection. |
-| `visitor_logs.csv` | Recognition event log. Header: `Visitor Name,Date,Time,Status`. Status = `Recognized`/`Unknown`. |
-| `visitor_tracking.json` | Entry/exit records: `Visitor Name, Entry Date/Time, Exit Date/Time, Status` (`Inside`/`Exited`). |
-| `visitor_registrations.json` | Visitor registrations with approval status. |
+| `model/label_names.npy` | Label array. |
+| `model/haarcascade_frontalface_default.xml` | Haar frontal-face cascade used for detection. |
+| `data/visitor_logs.csv` | Recognition event log. Header: `Visitor Name,Date,Time,Status`. Status = `Recognized`/`Unknown`. |
+| `data/visitor_tracking.json` | Entry/exit records: `Visitor Name, Entry Date/Time, Exit Date/Time, Status` (`Inside`/`Exited`). |
+| `data/visitor_registrations.json` | Visitor registrations with approval status. |
 | `visitor_captures/*.jpg` | Photos captured from the browser (`visitor_<timestamp>.jpg`). |
-| `visitor_logs_backup.py`, `visitor_logs_backup.csv`, `app_backup.py`, `face_recognition_backup.py` | Legacy backups. Not imported anywhere. |
+| `backups/` | Legacy backup files (dead code, gitignored). |
 
 ## 6. HTTP routes (all in `app.py`)
 
@@ -123,7 +125,7 @@ Browser ──► /api/visitor-logs, /api/open-visitors, /api/registrations,
 
 - **Confidence is a distance** — lower is better. `distance < 50` ⇒ recognized; display score is `100 - distance`.
 - **Label IDs come from sorted folder names** in `train_model.py`; if `label_names.npy` and model get out of sync, recognition names will be wrong. Retrain after adding/renaming dataset folders.
-- **`visitor_logs.py` uses relative paths** (`"visitor_logs.csv"`, `"visitor_tracking.json"`), while `app.py`/`visitor_registration.py` use absolute paths → logging/tracking breaks if the process CWD is not the project root. (`visitor_registration.py` and `host_approval.py` are safe.)
+- **`visitor_logs.py` uses relative paths** ~~(`"visitor_logs.csv"`, `"visitor_tracking.json"`)~~ — **fixed**: all module paths are now `__file__`-based and point into `data/`, so logging/tracking works from any CWD.
 - **`release_camera()` is never called** — no shutdown hook/`atexit`; camera may stay locked until process exit.
 - `log_interval` throttle key is `name_status`, so frequent unknown events are throttled per status, not globally.
 - CSV has **mixed date formats** historically (`DD-MM-YYYY` legacy rows vs `YYYY-MM-DD` new rows) and one junk row `{0: 'Vandana'}` — see `visitor_logs.csv`.

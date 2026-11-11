@@ -1,10 +1,10 @@
-
 import cv2
 import numpy as np
 import os
 
-DATASET_DIR = "dataset"
-MODEL_DIR = "model"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATASET_DIR = os.path.join(BASE_DIR, "dataset")
+MODEL_DIR = os.path.join(BASE_DIR, "model")
 
 os.makedirs(MODEL_DIR, exist_ok=True)
 

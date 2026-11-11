@@ -5,16 +5,16 @@ import threading
 import cv2
 import numpy as np
 
-from visitor_logs import log_visitor
+from .visitor_logs import log_visitor
 
 # Project paths
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(BASE_DIR, "model")
 
 MODEL_FILE = os.path.join(MODEL_DIR, "face_model.yml")
 LABEL_FILE = os.path.join(MODEL_DIR, "label_names.npy")
 CASCADE_FILE = os.path.join(
-    BASE_DIR, "haarcascade_frontalface_default.xml"
+    MODEL_DIR, "haarcascade_frontalface_default.xml"
 )
 
 # Face recognition settings

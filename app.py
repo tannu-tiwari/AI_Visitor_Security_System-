@@ -3,7 +3,7 @@ import csv
 import base64
 import binascii
 from datetime import datetime
-from email_sender import (
+from core.email_sender import (
     send_registration_email,
     send_decision_email,
     is_email_configured
@@ -20,23 +20,23 @@ from flask import (
 
 from werkzeug.utils import secure_filename
 
-from visitor_logs import (
+from core.visitor_logs import (
     mark_entry,
     mark_exit,
     get_open_visitors
 )
 
-from visitor_registration import (
+from core.visitor_registration import (
     register_visitor,
     load_registrations
 )
 
-from host_approval import (
+from core.host_approval import (
     get_pending_approvals,
     update_approval
 )
 
-from face_recognition import (
+from core.face_recognition import (
     generate_frames,
     camera_available
 )
@@ -47,7 +47,7 @@ from face_recognition import (
 # --------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOG_FILE = os.path.join(BASE_DIR, "visitor_logs.csv")
+LOG_FILE = os.path.join(BASE_DIR, "data", "visitor_logs.csv")
 CAPTURE_DIR = os.path.join(BASE_DIR, "visitor_captures")
 
 os.makedirs(CAPTURE_DIR, exist_ok=True)

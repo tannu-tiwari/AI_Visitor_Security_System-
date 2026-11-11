@@ -3,8 +3,9 @@ import os
 import json
 from datetime import datetime
 
-LOG_FILE = "visitor_logs.csv"
-VISIT_TRACKING_FILE = "visitor_tracking.json"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOG_FILE = os.path.join(BASE_DIR, "data", "visitor_logs.csv")
+VISIT_TRACKING_FILE = os.path.join(BASE_DIR, "data", "visitor_tracking.json")
 def load_visit_tracking():
     if not os.path.exists(VISIT_TRACKING_FILE):
         return []

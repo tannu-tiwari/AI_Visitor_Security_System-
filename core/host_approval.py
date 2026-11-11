@@ -1,5 +1,5 @@
 import json
-from visitor_registration import REGISTRATION_FILE, load_registrations
+from .visitor_registration import REGISTRATION_FILE, load_registrations
 
 def update_approval(registration_id, decision, decided_by, rejection_reason=None):
     if decision == "approve":
