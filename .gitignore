@@ -7,7 +7,7 @@ __pycache__/
 # Personal images — ignore contents, keep the folders themselves
 dataset/*
 visitor_captures/*
-data/*
+data/
 
 # Environment secrets
 .env
