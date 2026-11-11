@@ -69,6 +69,56 @@
     background: #dc2626;
 }
 
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-left: 12px;
+    border-left: 1px solid var(--border);
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.25;
+    min-width: 0;
+}
+
+.user-name {
+    max-width: 170px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.user-role {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.user-role.role-admin {
+    color: var(--primary);
+}
+
+.user-role.role-security {
+    color: #1d4ed8;
+}
+
+.user-role.role-host {
+    color: var(--orange);
+}
+
+.user-menu form {
+    margin: 0;
+}
+
 @media (max-width: 600px) {
     .topbar {
         padding: 15px;
@@ -76,5 +126,10 @@
 
     .brand h1 {
         font-size: 16px;
+    }
+
+    .user-menu {
+        padding-left: 0;
+        border-left: none;
     }
 }

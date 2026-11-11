@@ -30,6 +30,10 @@
     align-items: start;
 }
 
+.main-grid.single-column {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .footer {
     text-align: center;
     padding: 22px;

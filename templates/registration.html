@@ -91,17 +91,18 @@
 
             <div class="form-group">
                 <label for="visitorDepartment">Department *</label>
-                <select id="visitorDepartment" name="department" required>
-                    <option value="">Select department</option>
-                    <option>Computer Science</option>
-                    <option>Information Technology</option>
-                    <option>Electronics</option>
-                    <option>Mechanical</option>
-                    <option>Civil</option>
-                    <option>Administration</option>
-                    <option>Admissions</option>
-                    <option>Other</option>
+                <select id="visitorDepartment" name="department" required disabled>
+                    <option value="" disabled selected>Loading departments...</option>
                 </select>
+                <p class="form-hint" id="departmentStatus" role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="form-group">
+                <label for="visitorHost">Host / Person to Meet *</label>
+                <select id="visitorHost" name="host_id" required disabled>
+                    <option value="" disabled selected>Select Department First</option>
+                </select>
+                <p class="form-hint" id="hostStatus" role="status" aria-live="polite"></p>
             </div>
 
             <div class="form-group">
@@ -116,12 +117,6 @@
                     <option>Maintenance</option>
                     <option>Other</option>
                 </select>
-            </div>
-
-            <div class="form-group">
-                <label for="visitorHost">Host / Person to Meet *</label>
-                <input id="visitorHost" name="host" type="text" required
-                    placeholder="Faculty or staff name">
             </div>
 
         </div>

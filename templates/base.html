@@ -36,12 +36,15 @@
                 </div>
             </div>
 
+            {% set role = current_user.role %}
             <nav class="sidebar-nav">
                 <a href="{{ url_for('dashboard') }}" class="nav-link{{ ' active' if request.path == '/' }}"
                     aria-current="{{ 'page' if request.path == '/' }}">
                     <span class="nav-icon">📊</span>
                     Dashboard
                 </a>
+
+                {% if role in ('admin', 'security') %}
                 <a href="{{ url_for('registration_page') }}"
                     class="nav-link{{ ' active' if request.path == '/registration' }}"
                     aria-current="{{ 'page' if request.path == '/registration' }}">
@@ -54,18 +57,27 @@
                     <span class="nav-icon">📷</span>
                     Face Recognition
                 </a>
+                {% endif %}
+
+                {% if role in ('admin', 'host') %}
                 <a href="{{ url_for('approvals_page') }}"
                     class="nav-link{{ ' active' if request.path == '/approvals' }}"
                     aria-current="{{ 'page' if request.path == '/approvals' }}">
                     <span class="nav-icon">✅</span>
-                    Host Approvals
+                    {{ 'Approvals' if role == 'admin' else 'My Approval Requests' }}
                 </a>
+                {% endif %}
+
+                {% if role == 'host' %}
                 <a href="{{ url_for('approval_history_page') }}"
                     class="nav-link{{ ' active' if request.path == '/approval-history' }}"
                     aria-current="{{ 'page' if request.path == '/approval-history' }}">
                     <span class="nav-icon">🗂</span>
                     Approval History
                 </a>
+                {% endif %}
+
+                {% if role in ('admin', 'security') %}
                 <a href="{{ url_for('inside_visitors_page') }}"
                     class="nav-link{{ ' active' if request.path == '/inside-visitors' }}"
                     aria-current="{{ 'page' if request.path == '/inside-visitors' }}">
@@ -78,6 +90,15 @@
                     <span class="nav-icon">📜</span>
                     Visitor History
                 </a>
+                {% endif %}
+
+                {% if role == 'admin' %}
+                <span class="nav-link nav-link-disabled" aria-disabled="true">
+                    <span class="nav-icon">👤</span>
+                    User Management
+                    <span class="nav-badge">Soon</span>
+                </span>
+                {% endif %}
             </nav>
 
             <div class="sidebar-foot">
@@ -102,6 +123,20 @@
                     <div class="status-pill">
                         <span class="status-dot online"></span>
                         System Online
+                    </div>
+
+                    <div class="user-menu">
+                        <div class="user-details">
+                            <span class="user-name">{{ current_user.full_name or current_user.username }}</span>
+                            <span class="user-role role-{{ current_user.role or 'unassigned' }}">
+                                {{ current_user.role_label }}
+                            </span>
+                        </div>
+                        <form method="post" action="{{ url_for('auth.logout') }}">
+                            <button type="submit" class="button button-secondary small-button">
+                                Log out
+                            </button>
+                        </form>
                     </div>
                 </div>
             </header>

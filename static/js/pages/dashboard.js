@@ -112,10 +112,20 @@ function renderInsideSummary(visitors) {
 }
 
 async function refreshOverview() {
+    const logsPromise = $("recentActivityBody")
+        ? loadLogs()
+        : Promise.resolve([]);
+    const approvalsPromise = $("pendingSummaryList")
+        ? loadApprovals()
+        : Promise.resolve([]);
+    const visitorsPromise = $("insideSummaryList")
+        ? loadInsideVisitors()
+        : Promise.resolve([]);
+
     const [logs, approvals, visitors] = await Promise.all([
-        loadLogs(),
-        loadApprovals(),
-        loadInsideVisitors()
+        logsPromise,
+        approvalsPromise,
+        visitorsPromise
     ]);
 
     renderRecentActivity(logs);

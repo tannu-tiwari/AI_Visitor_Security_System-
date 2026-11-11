@@ -53,6 +53,27 @@
     font-size: 15px;
 }
 
+.nav-link-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.nav-link-disabled:hover {
+    background: transparent;
+}
+
+.nav-badge {
+    margin-left: auto;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
 .sidebar-foot {
     margin-top: auto;
     color: var(--muted);

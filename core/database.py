@@ -4,7 +4,7 @@ from contextlib import contextmanager
 
 from flask import has_app_context
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import event
+from sqlalchemy import event, inspect, text
 from sqlalchemy.engine import Engine
 
 # Database configuration
@@ -21,6 +21,11 @@ ENV_DB_PATH = "VISITOR_DB_PATH"
 db = SQLAlchemy()
 
 _application = None
+
+USER_COLUMN_ADDITIONS = {
+    "role": "VARCHAR(20) CHECK (role IN ('admin', 'security', 'host'))",
+    "department": "VARCHAR(120)",
+}
 
 
 def resolve_database_path(database_path=None):
@@ -76,8 +81,42 @@ def init_database(app, database_path=None):
         # Importing the models registers them with SQLAlchemy metadata.
         from . import models  # noqa: F401
         db.create_all()
+        ensure_user_schema()
 
     return path
+
+
+def ensure_user_schema():
+    """
+    Add role/department columns to a pre-RBAC users table.
+
+    SQLite cannot add a NOT NULL column without choosing a value for existing
+    rows, and inventing a role would be unsafe. Existing accounts therefore get
+    NULL (unassigned) and keep their password hashes until an administrator
+    runs ``flask assign-role``. Fresh databases get the full model schema.
+    """
+    inspector = inspect(db.engine)
+    if "users" not in inspector.get_table_names():
+        return []
+
+    existing_columns = {
+        column["name"] for column in inspector.get_columns("users")
+    }
+    added = []
+
+    with db.engine.begin() as connection:
+        for column_name, definition in USER_COLUMN_ADDITIONS.items():
+            if column_name in existing_columns:
+                continue
+            connection.execute(
+                text(
+                    f"ALTER TABLE users ADD COLUMN "
+                    f"{column_name} {definition}"
+                )
+            )
+            added.append(column_name)
+
+    return added
 
 
 def commit_session():

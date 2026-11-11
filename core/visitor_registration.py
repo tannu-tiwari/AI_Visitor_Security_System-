@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError
 
 from .database import app_scope, commit_session, db
-from .models import Visitor
+from .models import User, Visitor
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -23,42 +23,123 @@ def load_registrations():
         return [visitor.to_dict() for visitor in visitors]
 
 
+def get_host_departments():
+    """Distinct departments of active host accounts, sorted for display."""
+    with app_scope():
+        rows = db.session.execute(
+            db.select(User.department).where(
+                User.role == "host",
+                User.is_active.is_(True),
+                User.department.isnot(None),
+            )
+        ).scalars().all()
+
+    departments = {
+        department.strip()
+        for department in rows
+        if department and department.strip()
+    }
+    return sorted(departments, key=str.casefold)
+
+
+def get_hosts_for_department(department):
+    """Active hosts in one department, returned as id/name pairs."""
+    department = (department or "").strip()
+    if not department:
+        return []
+
+    with app_scope():
+        hosts = db.session.execute(
+            db.select(User)
+            .where(
+                User.role == "host",
+                User.is_active.is_(True),
+                db.func.trim(User.department) == department,
+            )
+            .order_by(db.func.lower(User.full_name), User.id)
+        ).scalars().all()
+
+        return [
+            {"id": host.id, "full_name": host.full_name}
+            for host in hosts
+        ]
+
+
+def _validate_host(host_id, department):
+    """Return (host, error) for an active host in the submitted department."""
+    try:
+        host_id = int(str(host_id).strip())
+    except (TypeError, ValueError):
+        return None, "Please select a valid host."
+
+    host = db.session.get(User, host_id)
+
+    if host is None:
+        return None, "The selected host no longer exists."
+
+    if host.role != "host":
+        return None, "The selected user is not a host."
+
+    if not host.is_active:
+        return None, "The selected host is inactive."
+
+    host_department = (host.department or "").strip()
+    if not host_department:
+        return None, "The selected host has no department."
+
+    if host_department.casefold() != department.casefold():
+        return None, "The selected host does not belong to this department."
+
+    return host, None
+
+
 def register_visitor(
-    name, phone, email, purpose, host, department,
+    name, phone, email, purpose, host_id, department,
     capture_filename=""
 ):
     name = name.strip()
     phone = phone.strip()
     email = email.strip()
     purpose = purpose.strip()
-    host = host.strip()
     department = department.strip()
+    host_id = str(host_id or "").strip()
 
-    if not all([name, phone, purpose, host, department]):
+    if not all([name, phone, purpose, department]):
         return False, "Please fill in all required fields.", None
 
-    now = datetime.now()
+    if not host_id:
+        return False, "Please select a host.", None
 
-    visitor = Visitor(
-        registration_id=f"VIS-{now.strftime('%Y%m%d%H%M%S%f')}",
-        name=name,
-        phone=phone,
-        email=email,
-        purpose=purpose,
-        host=host,
-        department=department,
-        photo_filename=capture_filename or "",
-        registered_at=now,
-        approval_status="Pending",
-    )
+    with app_scope():
+        host, error = _validate_host(host_id, department)
+        if error:
+            return False, error, None
 
-    try:
-        with app_scope():
+        host_name = (host.full_name or "").strip()
+        if not host_name:
+            return False, "The selected host has no name.", None
+
+        now = datetime.now()
+
+        visitor = Visitor(
+            registration_id=f"VIS-{now.strftime('%Y%m%d%H%M%S%f')}",
+            name=name,
+            phone=phone,
+            email=email,
+            purpose=purpose,
+            host=host_name,
+            department=host.department.strip(),
+            photo_filename=capture_filename or "",
+            registered_at=now,
+            approval_status="Pending",
+        )
+
+        try:
             db.session.add(visitor)
             commit_session()
             registration = visitor.to_dict()
-    except SQLAlchemyError:
-        print("Warning: Could not save visitor registration.")
-        return False, "Could not save registration.", None
+        except SQLAlchemyError:
+            print("Warning: Could not save visitor registration.")
+            return False, "Could not save registration.", None
 
     return True, "Visitor registered. Host approval is pending.", registration

@@ -18,6 +18,15 @@ export function initVisitorRegistration() {
             return;
         }
 
+        if (!payload.host_id) {
+            showFeedback(
+                feedback,
+                "Please select a department and an active host.",
+                false
+            );
+            return;
+        }
+
         setButtonLoading(submitButton, true, "Submitting...");
 
         try {

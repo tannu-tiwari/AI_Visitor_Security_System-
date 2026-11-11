@@ -1,9 +1,20 @@
 from datetime import datetime
 
+from flask_login import UserMixin
+from sqlalchemy.orm import validates
+from werkzeug.security import check_password_hash, generate_password_hash
+
 from .database import db
 
 
 REGISTRATION_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+VALID_ROLES = ("admin", "security", "host")
+ROLE_LABELS = {
+    "admin": "Administrator",
+    "security": "Security Guard",
+    "host": "Host",
+}
 
 
 def format_registration_time(value):
@@ -203,4 +214,77 @@ class RecognitionEvent(db.Model):
             "Date": self.event_date,
             "Time": self.event_time,
             "Status": self.status,
+        }
+
+
+class User(UserMixin, db.Model):
+    """
+    An application account.
+
+    Role is required for newly created accounts. The database column is
+    nullable only so pre-role accounts survive the schema upgrade unchanged;
+    those accounts keep their password hashes and must be assigned a role with
+    the ``flask assign-role`` command before they can use protected routes.
+    """
+
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), nullable=False, unique=True, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    full_name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(200), nullable=True, unique=True)
+    role = db.Column(db.String(20), nullable=True, index=True)
+    department = db.Column(db.String(120), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "role IN ('admin', 'security', 'host')",
+            name="ck_users_role",
+        ),
+    )
+
+    def __init__(self, **kwargs):
+        if not kwargs.get("role"):
+            raise ValueError("A role is required.")
+        super().__init__(**kwargs)
+
+    @validates("role")
+    def validate_role(self, key, value):
+        if value is None:
+            return None
+
+        normalized = str(value).strip().lower()
+        if normalized not in VALID_ROLES:
+            raise ValueError(
+                "Invalid role. Choose one of: " + ", ".join(VALID_ROLES) + "."
+            )
+        return normalized
+
+    @property
+    def role_label(self):
+        return ROLE_LABELS.get(self.role, "Unassigned")
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
+
+    def to_dict(self):
+        """Safe representation for authenticated API responses (no hash)."""
+        return {
+            "id": self.id,
+            "username": self.username,
+            "full_name": self.full_name,
+            "email": self.email,
+            "role": self.role,
+            "role_label": self.role_label,
+            "department": self.department,
+            "created_at": format_registration_time(self.created_at),
+            "is_active": bool(self.is_active),
         }

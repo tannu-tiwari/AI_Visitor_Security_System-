@@ -1,0 +1,121 @@
+.auth-body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    background:
+        radial-gradient(circle at top right, rgba(22, 101, 52, 0.10), transparent 45%),
+        radial-gradient(circle at bottom left, rgba(22, 101, 52, 0.06), transparent 40%),
+        var(--bg);
+}
+
+.auth-shell {
+    width: 100%;
+    max-width: 420px;
+}
+
+.auth-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.10);
+    padding: 32px;
+}
+
+.auth-brand {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.auth-brand-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: var(--primary);
+    color: var(--white);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.auth-brand h1 {
+    font-size: 20px;
+    margin-bottom: 6px;
+}
+
+.auth-brand p {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.auth-alert {
+    padding: 11px 13px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.auth-alert-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.auth-alert-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.auth-form .form-group {
+    margin-bottom: 15px;
+}
+
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 66px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    padding: 6px 8px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.password-toggle:hover {
+    background: var(--primary-light);
+}
+
+.password-toggle:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+}
+
+.auth-submit {
+    width: 100%;
+    margin-top: 6px;
+    padding: 12px 16px;
+}
+
+.auth-foot {
+    margin-top: 18px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.7;
+}

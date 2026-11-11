@@ -18,6 +18,7 @@
 </section>
 
 <section class="stats-grid">
+    {% if can_view_visitors %}
     <div class="stat-card">
         <div class="stat-top">
             <span class="stat-label">Total Visitor Records</span>
@@ -59,7 +60,9 @@
         <div class="stat-value" id="insideVisitors">0</div>
         <div class="stat-note">Open entry records</div>
     </div>
+    {% endif %}
 
+    {% if can_view_approvals %}
     <div class="stat-card">
         <div class="stat-top">
             <span class="stat-label">Pending Approvals</span>
@@ -70,10 +73,12 @@
         </div>
         <div class="stat-note">Registrations awaiting host decision</div>
     </div>
+    {% endif %}
 </section>
 
-<section class="main-grid">
+<section class="main-grid{{ ' single-column' if not can_view_visitors }}">
 
+    {% if can_view_visitors %}
     <div class="left-column">
 
         <section class="panel">
@@ -82,9 +87,11 @@
                     <h3>Recent Visitor Activity</h3>
                     <p>Latest recognition events recorded by the system</p>
                 </div>
+                {% if current_user.role in ('admin', 'security') %}
                 <a class="button button-secondary small-button" href="{{ url_for('visitor_history_page') }}">
                     Full History
                 </a>
+                {% endif %}
             </div>
 
             <div class="table-wrap">
@@ -130,9 +137,11 @@
         </section>
 
     </div>
+    {% endif %}
 
     <div class="right-column">
 
+        {% if can_view_approvals %}
         <section class="panel">
             <div class="panel-heading">
                 <div>
@@ -144,13 +153,17 @@
             <div id="pendingSummaryList">
                 <div class="loading-state"><span class="spinner"></span> Loading pending approvals...</div>
             </div>
+            {% if current_user.role in ('admin', 'host') %}
             <div class="list-actions">
                 <a class="button button-secondary small-button" href="{{ url_for('approvals_page') }}">
                     Review Approvals
                 </a>
             </div>
+            {% endif %}
         </section>
+        {% endif %}
 
+        {% if can_view_visitors %}
         <section class="panel">
             <div class="panel-heading">
                 <div>
@@ -162,12 +175,15 @@
             <div id="insideSummaryList">
                 <div class="loading-state"><span class="spinner"></span> Loading visitor records...</div>
             </div>
+            {% if current_user.role in ('admin', 'security') %}
             <div class="list-actions">
                 <a class="button button-secondary small-button" href="{{ url_for('inside_visitors_page') }}">
                     Manage Entry / Exit
                 </a>
             </div>
+            {% endif %}
         </section>
+        {% endif %}
 
     </div>
 </section>

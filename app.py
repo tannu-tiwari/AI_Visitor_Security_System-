@@ -1,6 +1,7 @@
 import os
 import base64
 import binascii
+import secrets
 from datetime import datetime
 from core.email_sender import (
     send_registration_email,
@@ -16,10 +17,13 @@ from flask import (
     Response,
     send_from_directory
 )
+from flask_login import current_user
 
 from werkzeug.utils import secure_filename
 
+from core.auth import init_auth
 from core.database import init_database
+from core.permissions import host_required, roles_required, security_required
 from core.visitor_logs import (
     load_logs,
     mark_entry,
@@ -28,6 +32,8 @@ from core.visitor_logs import (
 )
 
 from core.visitor_registration import (
+    get_host_departments,
+    get_hosts_for_department,
     register_visitor,
     load_registrations
 )
@@ -60,7 +66,19 @@ app = Flask(
 
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024
 
+SECRET_KEY = os.environ.get("SECRET_KEY", "").strip()
+
+if not SECRET_KEY:
+    SECRET_KEY = secrets.token_hex(32)
+    app.logger.warning(
+        "SECRET_KEY is not set; using an ephemeral key. "
+        "Add SECRET_KEY to .env to keep sessions across restarts."
+    )
+
+app.config["SECRET_KEY"] = SECRET_KEY
+
 DATABASE_PATH = init_database(app)
+init_auth(app)
 
 
 # --------------------------------------------------
@@ -95,33 +113,46 @@ def get_visitor_stats(logs):
 # --------------------------------------------------
 
 @app.route("/")
+@roles_required("admin", "security", "host")
 def dashboard():
-    logs = get_visitor_logs()
+    can_view_visitors = current_user.role in ("admin", "security")
+    can_view_approvals = current_user.role in ("admin", "host")
+
+    logs = get_visitor_logs() if can_view_visitors else []
+    pending_approvals = (
+        len(get_pending_approvals()) if can_view_approvals else 0
+    )
 
     return render_template(
         "dashboard.html",
         logs=logs[::-1],
-        pending_approvals=len(get_pending_approvals()),
+        pending_approvals=pending_approvals,
+        can_view_visitors=can_view_visitors,
+        can_view_approvals=can_view_approvals,
         **get_visitor_stats(logs)
     )
 
 
 @app.route("/registration")
+@security_required
 def registration_page():
     return render_template("registration.html")
 
 
 @app.route("/recognition")
+@security_required
 def recognition_page():
     return render_template("recognition.html")
 
 
 @app.route("/approvals")
+@host_required
 def approvals_page():
     return render_template("approvals.html")
 
 
 @app.route("/approval-history")
+@host_required
 def approval_history_page():
     history = get_approval_history()
 
@@ -134,11 +165,13 @@ def approval_history_page():
 
 
 @app.route("/inside-visitors")
+@security_required
 def inside_visitors_page():
     return render_template("inside_visitors.html")
 
 
 @app.route("/visitor-history")
+@security_required
 def visitor_history_page():
     logs = get_visitor_logs()
     registrations = load_registrations()
@@ -178,6 +211,7 @@ def health_check():
 # --------------------------------------------------
 
 @app.route("/api/visitor-logs")
+@security_required
 def visitor_logs_api():
     logs = get_visitor_logs()
 
@@ -188,6 +222,7 @@ def visitor_logs_api():
 
 
 @app.route("/api/open-visitors")
+@security_required
 def open_visitors_api():
     return jsonify({
         "visitors": get_open_visitors()
@@ -195,16 +230,19 @@ def open_visitors_api():
 
 
 @app.route("/api/registrations")
+@security_required
 def registrations_api():
     return jsonify(load_registrations())
 
 
 @app.route("/api/pending-approvals")
+@host_required
 def pending_approvals_api():
     return jsonify(get_pending_approvals())
 
 
 @app.route("/api/approval-history")
+@host_required
 def approval_history_api():
     return jsonify(get_approval_history())
 
@@ -214,6 +252,7 @@ def approval_history_api():
 # --------------------------------------------------
 
 @app.route("/save-capture", methods=["POST"])
+@security_required
 def save_capture():
     data = request.get_json(silent=True) or {}
     image_data = data.get("image", "")
@@ -286,6 +325,7 @@ ALLOWED_PHOTO_EXTENSIONS = (".jpg", ".jpeg", ".png")
 
 
 @app.route("/visitor-captures/<filename>")
+@roles_required("admin", "security", "host")
 def serve_visitor_capture(filename):
     safe_filename = secure_filename(filename)
 
@@ -324,7 +364,29 @@ def serve_visitor_capture(filename):
 # --------------------------------------------------
 
 
+@app.route("/api/departments")
+@security_required
+def host_departments_api():
+    return jsonify({"departments": get_host_departments()})
+
+
+@app.route("/api/hosts")
+@security_required
+def hosts_api():
+    department = (request.args.get("department") or "").strip()
+
+    if not department:
+        return jsonify({
+            "success": False,
+            "message": "Department is required.",
+            "hosts": []
+        }), 400
+
+    return jsonify({"hosts": get_hosts_for_department(department)})
+
+
 @app.route("/register-visitor", methods=["POST"])
+@security_required
 def register_new_visitor():
     data = request.get_json(silent=True)
 
@@ -336,7 +398,7 @@ def register_new_visitor():
         data.get("phone", ""),
         data.get("email", ""),
         data.get("purpose", ""),
-        data.get("host", ""),
+        data.get("host_id", ""),
         data.get("department", ""),
         data.get("capture_filename", "")
     )
@@ -364,6 +426,7 @@ def register_new_visitor():
     "/host-approval/<registration_id>/<decision>",
     methods=["POST"]
 )
+@host_required
 def process_host_approval(registration_id, decision):
     decision = decision.lower()
 
@@ -419,6 +482,7 @@ def process_host_approval(registration_id, decision):
 # --------------------------------------------------
 
 @app.route("/mark-entry", methods=["POST"])
+@security_required
 def mark_visitor_entry():
     data = request.get_json(silent=True)
 
@@ -462,6 +526,7 @@ def mark_visitor_entry():
 # --------------------------------------------------
 
 @app.route("/mark-exit", methods=["POST"])
+@security_required
 def mark_visitor_exit():
     data = request.get_json(silent=True)
 
@@ -505,6 +570,7 @@ def mark_visitor_exit():
 # --------------------------------------------------
 
 @app.route("/camera-status")
+@roles_required("admin", "security", "host")
 def camera_status():
     try:
         available = camera_available()
@@ -532,6 +598,7 @@ def camera_status():
 # --------------------------------------------------
 
 @app.route("/video_feed")
+@security_required
 def video_feed():
     return Response(
         generate_frames(),
