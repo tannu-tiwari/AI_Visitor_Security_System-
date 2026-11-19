@@ -5,6 +5,9 @@ face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
 
+# CLAHE: local contrast normalize karo (bright light / backlight ke liye)
+clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+
 # Webcam open karo
 camera = cv2.VideoCapture(0)
 
@@ -19,11 +22,15 @@ while True:
     # Color image ko grayscale mein convert karo
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
+    # Local contrast normalize karo (bright light / backlight ke liye)
+    gray = clahe.apply(gray)
+
     # Face detect karo
     faces = face_cascade.detectMultiScale(
         gray,
-        scaleFactor=1.3,
-        minNeighbors=5
+        scaleFactor=1.1,
+        minNeighbors=5,
+        minSize=(40, 40)
     )
 
     # Har detected face ke around rectangle

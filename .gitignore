@@ -8,6 +8,7 @@ __pycache__/
 dataset/*
 visitor_captures/*
 data/
+model/face_model.yml
 
 # SQLite database files (contain personal visitor records)
 data/*.db

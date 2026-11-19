@@ -16,6 +16,53 @@ recognizer = cv2.face.LBPHFaceRecognizer_create(
     threshold=80
 )
 
+
+def preprocess_face(image, size=(200, 200)):
+    """Grayscale + CLAHE; resize to 200x200 unless size is None."""
+    if len(image.shape) == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    image = clahe.apply(image)
+    if size is not None:
+        image = cv2.resize(image, size)
+    return image
+
+
+def augment_face(face):
+    """In-memory variants for tilt, lighting and mirror tolerance."""
+    variants = [face]
+    height, width = face.shape[:2]
+    center = (width / 2.0, height / 2.0)
+
+    for angle in (-15, -10, 10, 15):
+        matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+        variants.append(
+            cv2.warpAffine(
+                face,
+                matrix,
+                (width, height),
+                flags=cv2.INTER_LINEAR,
+                borderMode=cv2.BORDER_REPLICATE
+            )
+        )
+
+    variants.append(cv2.flip(face, 1))
+    variants.append(cv2.convertScaleAbs(face, alpha=1.15, beta=20))
+    variants.append(cv2.convertScaleAbs(face, alpha=0.85, beta=-20))
+
+    bright_lut = np.array(
+        [((i / 255.0) ** 0.8) * 255 for i in range(256)],
+        dtype=np.uint8
+    )
+    dark_lut = np.array(
+        [((i / 255.0) ** 1.2) * 255 for i in range(256)],
+        dtype=np.uint8
+    )
+    variants.append(cv2.LUT(face, bright_lut))
+    variants.append(cv2.LUT(face, dark_lut))
+
+    return variants
+
 faces = []
 labels = []
 label_names = {}
@@ -51,10 +98,11 @@ for person_name in sorted(os.listdir(DATASET_DIR)):
             print(f"Skipping unreadable image: {image_path}")
             continue
 
-        image = cv2.resize(image, (200, 200))
+        image = preprocess_face(image)
 
-        faces.append(image)
-        labels.append(label_id)
+        for variant in augment_face(image):
+            faces.append(variant)
+            labels.append(label_id)
 
     print(f"Loaded {len(image_files)} images for {person_name}")
     label_id += 1

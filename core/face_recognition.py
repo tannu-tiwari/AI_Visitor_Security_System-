@@ -33,6 +33,87 @@ label_names = []
 face_cascade = None
 
 
+def preprocess_face(image, size=(200, 200)):
+    """Grayscale + CLAHE; resize to 200x200 unless size is None."""
+    if len(image.shape) == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    image = clahe.apply(image)
+    if size is not None:
+        image = cv2.resize(image, size)
+    return image
+
+
+def detect_faces(frame):
+    """Upright pass first, then retry on rotated frames for head tilt."""
+    gray = preprocess_face(frame, size=None)
+
+    faces = face_cascade.detectMultiScale(
+        gray,
+        scaleFactor=1.1,
+        minNeighbors=5,
+        minSize=(50, 50)
+    )
+
+    if len(faces) > 0:
+        return [
+            ((x, y, w, h), frame[y:y + h, x:x + w])
+            for (x, y, w, h) in faces
+        ]
+
+    results = []
+    height, width = gray.shape[:2]
+    center = (width / 2.0, height / 2.0)
+
+    for angle in (-20, 20, -35, 35):
+        matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+        rotated = cv2.warpAffine(
+            gray,
+            matrix,
+            (width, height),
+            flags=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_REPLICATE
+        )
+
+        rotated_faces = face_cascade.detectMultiScale(
+            rotated,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(50, 50)
+        )
+
+        if len(rotated_faces) == 0:
+            continue
+
+        # Crop from the rotated (upright) image, map the box back for drawing.
+        rotated_frame = cv2.warpAffine(
+            frame,
+            matrix,
+            (width, height),
+            flags=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_REPLICATE
+        )
+        inverse = cv2.invertAffineTransform(matrix)
+
+        for (x, y, w, h) in rotated_faces:
+            cx = x + w / 2.0
+            cy = y + h / 2.0
+            ox = inverse[0, 0] * cx + inverse[0, 1] * cy + inverse[0, 2]
+            oy = inverse[1, 0] * cx + inverse[1, 1] * cy + inverse[1, 2]
+
+            box = (
+                int(round(ox - w / 2.0)),
+                int(round(oy - h / 2.0)),
+                int(w),
+                int(h)
+            )
+            results.append((box, rotated_frame[y:y + h, x:x + w]))
+
+        break
+
+    return results
+
+
 def initialize_recognition():
     """Load the trained model and face detector once."""
     global recognizer, label_names, face_cascade
@@ -138,20 +219,13 @@ def generate_frames():
             continue
 
         try:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = detect_faces(frame)
 
-            faces = face_cascade.detectMultiScale(
-                gray,
-                scaleFactor=1.3,
-                minNeighbors=5,
-                minSize=(50, 50)
-            )
-
-            for (x, y, w, h) in faces:
-                face = gray[y:y + h, x:x + w]
-                face = cv2.resize(face, (200, 200))
+            for (x, y, w, h), face_crop in faces:
+                face = preprocess_face(face_crop)
 
                 label_id, distance = recognizer.predict(face)
+                distance_text = f"{distance:.0f}" if distance < 1e6 else "n/a"
 
                 if (
                     distance < CONFIDENCE_THRESHOLD
@@ -161,12 +235,12 @@ def generate_frames():
                     status = "Recognized"
                     color = (0, 255, 0)
                     score = max(0, 100 - distance)
-                    display_text = f"{name} ({score:.0f}%)"
+                    display_text = f"{name} ({score:.0f}%) d={distance_text}"
                 else:
                     name = "Unknown Visitor"
                     status = "Unknown"
                     color = (0, 0, 255)
-                    display_text = "Unknown Visitor"
+                    display_text = f"Unknown Visitor (d={distance_text})"
 
                 now = time.time()
                 log_key = f"{name}_{status}"
